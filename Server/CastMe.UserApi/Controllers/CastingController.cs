@@ -2,10 +2,14 @@
 using Application.Mapper;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Services;
+using WebApi.Endpoints;
 
 namespace WebApi.Controllers
 {
     [ApiController]
+    [Route("casting")]
+    [Tags("Castings")]
+    [Produces("application/json")]
     public class CastingController : ControllerBase
     {
         private readonly CastingService _castingService;
@@ -20,7 +24,7 @@ namespace WebApi.Controllers
 
 
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
-        [ProducesResponseType(typeof(CastingDto.Read), 201)]
+        [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetAllUsers()
         {
             var castings = await _castingService.GetAllCastings();
@@ -41,7 +45,7 @@ namespace WebApi.Controllers
         [HttpGet(Endpoints.CastingEndpoints.GetByOrganiserId)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
-        public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetByOrganiserId([FromBody] Guid userId)
+        public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetByOrganiserId([FromRoute] Guid userId)
         {
             var castings = await _castingService.GetCastingsByOrganiserId(userId);
             return Ok(castings.Select(c => c.ToReadDto()));

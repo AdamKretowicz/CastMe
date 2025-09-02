@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Domain.Entities
@@ -25,7 +26,7 @@ namespace Domain.Entities
         public string Location { get; set; } = default!;
 
         [Required]
-        public DateTimeOffset EventDate { get; set; }
+        public DateTime EventDate { get; set; }
 
         [StringLength(1000)]
         public string? Requirements { get; set; }
@@ -47,13 +48,14 @@ namespace Domain.Entities
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Nawigacje
+        [JsonIgnore]
         public ICollection<CastingRole> Roles { get; set; } = new List<CastingRole>();
+        [JsonIgnore]
         public ICollection<CastingTag> Tags { get; set; } = new List<CastingTag>();
     }
 
 
-    
+
 
 
 }

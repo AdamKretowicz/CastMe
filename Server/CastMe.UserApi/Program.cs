@@ -1,13 +1,14 @@
 ﻿using System.Text;
-using Application.Auth;            
-using CastMe.UserApi.Services;     
-using Infrastructure.Auth;         
-using Infrastructure.Context;      
-using Infrastructure.Security;     
+using Application.Auth;
+using CastMe.UserApi.Services;
+using Infrastructure.Auth;
+using Infrastructure.Context;
+using Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +29,7 @@ builder.Services.AddSwaggerGen(c =>
     };
     c.AddSecurityDefinition("Bearer", scheme);
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
+    c.CustomSchemaIds(type => type.FullName.Replace("+", "."));
 });
 
 // DbContext z SQL Server (ConnectionString w appsettings.json)
@@ -77,6 +79,7 @@ builder.Services.AddAuthorization();
 
 // Utworzone serwisy 
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<CastingService>();
 
 var app = builder.Build();
 

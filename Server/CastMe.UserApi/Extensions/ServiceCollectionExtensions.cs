@@ -10,7 +10,7 @@ namespace CastMe.UserApi.Extensions
         {
             services.AddDbContext<UserDbContext, UserDbContext>();
             services.AddTransient<UserService>();
-            services.AddScoped<CastingService>();
+            services.AddTransient<CastingService>();
             return services;
         }
     }

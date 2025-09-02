@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Domain.Entities
@@ -18,6 +19,7 @@ namespace Domain.Entities
         public Guid CastingId { get; set; }
 
         [ForeignKey(nameof(CastingId))]
+        [JsonIgnore]
         public Casting Casting { get; set; } = default!;
 
         [Required, StringLength(20)]

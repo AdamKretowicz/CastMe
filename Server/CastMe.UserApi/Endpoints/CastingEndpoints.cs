@@ -2,7 +2,7 @@
 {
     public static class CastingEndpoints
     {
-        private const string basePath = "/casting";
+        public const string basePath = "casting";
 
         public const string Create = basePath;
         public const string GetAll = basePath;
