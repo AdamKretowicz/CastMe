@@ -1,0 +1,105 @@
+﻿using Application.Dtos;
+using CastMe.Domain.Entities;
+using Domain.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Application.Mapper
+{
+    public static class CastingMapper
+    {
+
+
+        // ENTITY -> READ DTO
+        public static CastingDto.Read ToReadDto(this Casting casting) => new CastingDto.Read
+        {
+            Id = casting.Id,
+            Title = casting.Title,
+            Description = casting.Description,
+            Location = casting.Location,
+            EventDate = casting.EventDate,
+            Requirements = casting.Requirements,
+            Compensation = casting.Compensation,
+            BannerPath = casting.BannerPath,
+            OrganizerId = casting.OrganizerId,
+            Status = casting.Status,
+            CreatedAt = casting.CreatedAt,
+            UpdatedAt = casting.UpdatedAt,
+            Roles = casting.Roles.Select(r => new CastingDto.ReadRole
+            {
+                Role = r.Role,
+                Capacity = r.Capacity,
+                AcceptedCount = r.AcceptedCount
+            }).ToList(),
+            Tags = casting.Tags.Select(t => t.Value).ToList()
+        };
+
+
+        // CREATE DTO -> ENTITY
+        public static Casting ToEntity(this CastingDto.Create dto)
+        {
+            var casting = new Casting
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                Location = dto.Location,
+                EventDate = dto.EventDate,
+                Requirements = dto.Requirements,
+                Compensation = dto.Compensation,
+                BannerPath = dto.BannerPath,
+                UpdatedAt = DateTime.UtcNow
+            };
+            // Mapowanie ról
+            casting.Roles = dto.Roles.Select(r => new CastingRole
+            {
+                Role = r.Role,
+                Capacity = r.Capacity
+            }).ToList();
+            // Mapowanie tagów
+            casting.Tags = dto.Tags.Select(t => new CastingTag
+            {
+                Value = t
+            }).ToList();
+            return casting;
+        }
+
+        // UPDATE DTO -> ENTITY
+        public static void UpdateEntity(this Casting casting, CastingDto.Update dto)
+        {
+            casting.Title = dto.Title;
+            casting.Description = dto.Description;
+            casting.Location = dto.Location;
+            casting.EventDate = dto.EventDate;
+            casting.Requirements = dto.Requirements;
+            casting.Compensation = dto.Compensation;
+            casting.BannerPath = dto.BannerPath;
+            casting.Status = dto.Status;
+            casting.UpdatedAt = DateTime.UtcNow;
+            // Aktualizacja ról
+            casting.Roles.Clear();
+            foreach (var roleDto in dto.Roles)
+            {
+                casting.Roles.Add(new CastingRole
+                {
+                    Role = roleDto.Role,
+                    Capacity = roleDto.Capacity
+                });
+            }
+            // Aktualizacja tagów
+            casting.Tags.Clear();
+            foreach (var tag in dto.Tags)
+            {
+                casting.Tags.Add(new CastingTag
+                {
+                    Value = tag
+                });
+            }
+        }
+
+
+
+    }
+}
