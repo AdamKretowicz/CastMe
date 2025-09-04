@@ -1,14 +1,17 @@
-﻿using System.Text;
-using Application.Auth;
+﻿using Application.Auth;
+using CastMe.Api.Features.Photos;
 using CastMe.UserApi.Services;
 using Infrastructure.Auth;
 using Infrastructure.Context;
 using Infrastructure.Security;
+using Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Text;
 using WebApi.Services;
+using WebApi.Services.Photo;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +21,9 @@ builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    // >>> DODANE: definicja dokumentu v1, żeby /swagger/v1/swagger.json działało
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "CastMe WebApi", Version = "v1" });
+
     var scheme = new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -31,6 +37,9 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
     c.CustomSchemaIds(type => type.FullName.Replace("+", "."));
 });
+
+// >>> DODANE: wsparcie dla Newtonsoft w Swaggerze
+builder.Services.AddSwaggerGenNewtonsoftSupport();
 
 // DbContext z SQL Server (ConnectionString w appsettings.json)
 builder.Services.AddDbContext<UserDbContext>(options =>
@@ -80,8 +89,14 @@ builder.Services.AddAuthorization();
 // Utworzone serwisy 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<CastingService>();
+builder.Services.AddScoped<IPhotoService, PhotoService>();
+
+builder.Services.Configure<LocalStorageOptions>(builder.Configuration.GetSection("LocalStorage"));
+builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 
 var app = builder.Build();
+
+app.UseStaticFiles();
 
 // Swagger (tu włączam zawsze; jeśli chcesz tylko w DEV, owiń w if)
 app.UseSwagger();

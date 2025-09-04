@@ -9,7 +9,7 @@ public class UserDbContext : DbContext
 
     public DbSet<User> Users { get; set; } = null!;
 
-
+    public DbSet<Photo> Photos { get; set; } = null!;
     public DbSet<Casting> Castings { get; set; } = null!;
     public DbSet<CastingRole> Roles { get; set; } = null!;
     public DbSet<CastingTag> Tags { get; set; } = null!;

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Domain.Entities;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CastMe.Domain.Entities
@@ -36,5 +37,9 @@ namespace CastMe.Domain.Entities
 
         public string HairColor { get; set; } = default!;
         public string ClothingSize { get; set; } = default!;
+
+
+
+        public ICollection<Photo> Photos { get; set; } = new List<Photo>();
     }
 }
