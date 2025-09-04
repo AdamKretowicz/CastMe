@@ -13,4 +13,18 @@ public class UserDbContext : DbContext
     public DbSet<Casting> Castings { get; set; } = null!;
     public DbSet<CastingRole> Roles { get; set; } = null!;
     public DbSet<CastingTag> Tags { get; set; } = null!;
+    public DbSet<UserRole> UserRoles { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<User>()
+            .HasOne(u => u.Role)
+            .WithMany(r => r.Users)
+            .HasForeignKey(u => u.RoleId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+
 }

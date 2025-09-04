@@ -124,5 +124,12 @@ namespace CastMe.User.CrossCutting.DTOs
             [MinLength(8), MaxLength(250)]
             public string? Description { get; set; }
         }
+
+        public class StatusUpdate
+        {
+            [Required]
+            public UserStatus Status { get; set; }
+        }
+
     }
 }

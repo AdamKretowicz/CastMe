@@ -19,6 +19,7 @@ namespace WebApi.Controllers
 
 
         [HttpPost("send")]
+        [ProducesResponseType(200)]
         public async Task<IActionResult> Send([FromBody] EmailForm dto)
         {
             await _emailSender.SendEmailAsync(dto);

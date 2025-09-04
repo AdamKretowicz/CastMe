@@ -1,6 +1,7 @@
 ﻿using Domain.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data;
 
 namespace CastMe.Domain.Entities
 {
@@ -41,5 +42,14 @@ namespace CastMe.Domain.Entities
 
 
         public ICollection<Photo> Photos { get; set; } = new List<Photo>();
+
+
+
+        public int RoleId { get; set; } 
+        public UserRole Role { get; set; }
+
+
+        public UserStatus Status { get; set; } = UserStatus.Pending;
+            
     }
 }

@@ -22,7 +22,7 @@ namespace WebApi.Controllers
         }
 
 
-
+        //<summary>Get all castings.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetAllUsers()
@@ -31,6 +31,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
+        //<summary>Get casting by Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetById)]
         [ProducesResponseType(typeof(CastingDto.Read), 200)]
         [ProducesResponseType(404)]
@@ -41,7 +42,7 @@ namespace WebApi.Controllers
             return Ok(casting.ToReadDto());
         }
 
-
+        //<summary>Get castings by organiser Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetByOrganiserId)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
@@ -51,6 +52,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
+        //<summary>Create new casting.</summary>
         [HttpPost(Endpoints.CastingEndpoints.Create)]
         [ProducesResponseType(typeof(CastingDto.Read), 201)]
         [ProducesResponseType(400)]
@@ -63,6 +65,7 @@ namespace WebApi.Controllers
             return CreatedAtAction(nameof(GetById), new { id = casting.Id }, casting.ToReadDto());
         }
 
+        //<summary>Update existing casting.</summary>
         [HttpPut(Endpoints.CastingEndpoints.Update)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
@@ -78,7 +81,7 @@ namespace WebApi.Controllers
             await _castingService.Update(existingCasting);
             return Ok(existingCasting.ToReadDto());
         }
-
+        ///<summary>Delete casting by Id.</summary>
         [HttpDelete(Endpoints.CastingEndpoints.Delete)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]

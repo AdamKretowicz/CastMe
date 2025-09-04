@@ -4,6 +4,7 @@ using CastMe.UserApi.Mappers;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Application.Auth;
+using Domain.Entities;
 
 namespace CastMe.UserApi.Controllers
 {
@@ -138,5 +139,20 @@ namespace CastMe.UserApi.Controllers
             await _userService.Delete(id);
             return NoContent();
         }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UserDto.StatusUpdate dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var existingUser = await _userService.GetById(id);
+            if (existingUser is null) return NotFound();
+
+            var resultUser = await _userService.UpdateUserStatusAsync(id,dto.Status);
+
+            return Ok(existingUser.ToReadDto());
+            
+        }
+
     }
 }

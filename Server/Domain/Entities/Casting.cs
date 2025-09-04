@@ -35,7 +35,7 @@ namespace Domain.Entities
         public string? Compensation { get; set; }
 
         [StringLength(200)]
-        public string? BannerPath { get; set; }
+        public string? BannerUrl { get; set; }
 
         [Required]
         public Guid OrganizerId { get; set; }

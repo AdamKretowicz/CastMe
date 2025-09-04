@@ -1,4 +1,8 @@
-﻿using Infrastructure.Context;
+﻿using Application.Dtos;
+using Application.Interfaces;
+using CastMe.Domain.Entities;
+using CastMe.User.CrossCutting.DTOs;
+using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace CastMe.UserApi.Services
@@ -6,7 +10,13 @@ namespace CastMe.UserApi.Services
     public class UserService
     {
         private readonly UserDbContext _context;
-        public UserService(UserDbContext context) => _context = context;
+        private readonly IEmailSender _emailSender;
+
+        public UserService(UserDbContext context, IEmailSender emailSender)
+        {
+            _context = context;
+            _emailSender = emailSender;
+        }
 
         public async Task<IEnumerable<Domain.Entities.User>> GetAllUsers() =>
             await _context.Users.AsNoTracking().ToListAsync();
@@ -33,5 +43,48 @@ namespace CastMe.UserApi.Services
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<Domain.Entities.User> UpdateUserStatusAsync(Guid userId, UserStatus newStatus)
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                throw new Exception("User not found");
+            }
+            user.Status = newStatus;
+            await _context.SaveChangesAsync();
+            try
+            {
+                var emailMessage = newStatus switch
+                {
+                    UserStatus.Active => "Twoje konto zostało aktywowane.",
+                    UserStatus.Rejected => "Twoje konto nie zostało zaakceptowane. Dziękujemy za zainteresowanie",
+                    _ => "Status Twojego konta został zaktualizowany."
+                };
+
+
+                var email = new EmailForm
+                {
+                    To = user.Email,
+                    Subject = "Aktualizacja Statusu",
+                    Message = emailMessage,
+                };
+
+                await _emailSender.SendEmailAsync(email);
+                return GetById(userId); // Status updated successfully
+            }
+            catch(Exception e)
+            {
+                throw new Exception(e.Message);
+
+            }
+            
+
+
+        }
+
+
+
+
     }
 }
