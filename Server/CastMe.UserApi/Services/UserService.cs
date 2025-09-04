@@ -71,7 +71,7 @@ namespace CastMe.UserApi.Services
                 };
 
                 await _emailSender.SendEmailAsync(email);
-                return GetById(userId); // Status updated successfully
+                return user; // Status updated successfully
             }
             catch(Exception e)
             {
