@@ -19,7 +19,6 @@ namespace Domain.Entities
         public Guid CastingId { get; set; }
 
         [ForeignKey(nameof(CastingId))]
-        [JsonIgnore]
         public Casting Casting { get; set; } = default!;
 
         [Required, StringLength(20)]

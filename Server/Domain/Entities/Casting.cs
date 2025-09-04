@@ -48,9 +48,7 @@ namespace Domain.Entities
 
         public DateTime? UpdatedAt { get; set; }
 
-        [JsonIgnore]
         public ICollection<CastingRole> Roles { get; set; } = new List<CastingRole>();
-        [JsonIgnore]
         public ICollection<CastingTag> Tags { get; set; } = new List<CastingTag>();
     }
 
