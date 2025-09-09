@@ -23,7 +23,7 @@ namespace Application.Mapper
             EventDate = casting.EventDate,
             Requirements = casting.Requirements,
             Compensation = casting.Compensation,
-            BannerPath = casting.BannerPath,
+            BannerUrl = casting.BannerUrl,
             OrganizerId = casting.OrganizerId,
             Status = casting.Status,
             CreatedAt = casting.CreatedAt,
@@ -49,7 +49,7 @@ namespace Application.Mapper
                 EventDate = dto.EventDate,
                 Requirements = dto.Requirements,
                 Compensation = dto.Compensation,
-                BannerPath = dto.BannerPath,
+                BannerUrl = dto.BannerUrl,
                 UpdatedAt = DateTime.UtcNow
             };
             // Mapowanie ról
@@ -75,7 +75,7 @@ namespace Application.Mapper
             casting.EventDate = dto.EventDate;
             casting.Requirements = dto.Requirements;
             casting.Compensation = dto.Compensation;
-            casting.BannerPath = dto.BannerPath;
+            casting.BannerUrl = dto.BannerUrl;
             casting.Status = dto.Status;
             casting.UpdatedAt = DateTime.UtcNow;
             // Aktualizacja ról

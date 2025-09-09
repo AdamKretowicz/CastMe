@@ -35,7 +35,7 @@ namespace Domain.Entities
         public string? Compensation { get; set; }
 
         [StringLength(200)]
-        public string? BannerPath { get; set; }
+        public string? BannerUrl { get; set; }
 
         [Required]
         public Guid OrganizerId { get; set; }
@@ -48,9 +48,7 @@ namespace Domain.Entities
 
         public DateTime? UpdatedAt { get; set; }
 
-        [JsonIgnore]
         public ICollection<CastingRole> Roles { get; set; } = new List<CastingRole>();
-        [JsonIgnore]
         public ICollection<CastingTag> Tags { get; set; } = new List<CastingTag>();
     }
 
