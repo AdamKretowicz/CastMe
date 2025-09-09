@@ -45,7 +45,7 @@ namespace CastMe.Domain.Entities
 
 
 
-        public int RoleId { get; set; } 
+        public Guid RoleId { get; set; } 
         public UserRole Role { get; set; }
 
 
