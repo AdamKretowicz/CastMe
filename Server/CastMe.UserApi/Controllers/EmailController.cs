@@ -17,13 +17,13 @@ namespace WebApi.Controllers
             _emailSender = emailSender;
         }
 
-
+        //<summary>Send an email.</summary>
         [HttpPost("send")]
         [ProducesResponseType(200)]
         public async Task<IActionResult> Send([FromBody] EmailForm dto)
         {
             await _emailSender.SendEmailAsync(dto);
-            return Ok(new { Message = "Email sent (simulated)" });
+            return Ok(new { Message = "Email sent" });
         }
 
 

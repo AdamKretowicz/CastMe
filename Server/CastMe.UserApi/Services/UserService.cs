@@ -62,6 +62,10 @@ namespace CastMe.UserApi.Services
                     _ => "Status Twojego konta został zaktualizowany."
                 };
 
+                if (newStatus != UserStatus.Pending)
+                {
+                    return user; // No email for pending status
+                }
 
                 var email = new EmailForm
                 {

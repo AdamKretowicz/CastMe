@@ -3,9 +3,10 @@ using Application.Auth;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
 using Infrastructure.Context;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WebApi.Controllers
 {
@@ -18,16 +19,20 @@ namespace WebApi.Controllers
         private readonly UserDbContext _db;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtTokenService _tokenService;
+        private readonly Application.Interfaces.IAuthorizationService _authorizationService;
 
         public AuthController(
-            UserDbContext db,
-            IPasswordHasher passwordHasher,
-            IJwtTokenService tokenService)
+            UserDbContext db, 
+            IPasswordHasher passwordHasher, 
+            IJwtTokenService tokenService, 
+            Application.Interfaces.IAuthorizationService authorizationService)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
+            _authorizationService = authorizationService;
         }
+
 
         [HttpPost("register")]
         [AllowAnonymous]
@@ -112,5 +117,34 @@ namespace WebApi.Controllers
                 user = new { user.Id, user.UserName, user.Email, user.FirstName, user.LastName }
             });
         }
+
+        [HttpGet("permissions")]
+        public async Task<IActionResult> GetUserPermissions()
+        {
+            var userIdClaim = User.FindFirst("sub") ?? User.FindFirst("id");
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
+            var permissions = await _authorizationService.GetUserPermissionsAsync(userId);
+            return Ok(permissions);
+        }
+
+        [HttpGet("check-permission")]
+        public async Task<IActionResult> CheckPermission([FromQuery] string action, [FromQuery] string resource)
+        {
+            var userIdClaim = User.FindFirst("sub") ?? User.FindFirst("id");
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized();
+            }
+            var hasPermission = await _authorizationService.CanAccessAsync(userId, action, resource);
+            return Ok(new { hasPermission });
+        }
+
+
+
+
+
     }
 }

@@ -52,4 +52,17 @@ namespace CastMe.Domain.Entities
         public UserStatus Status { get; set; } = UserStatus.Pending;
             
     }
+
+    [Table("UserRolePermissions", Schema = "User")]
+    public class UserRolePermission
+    {
+        [Required]
+        public Guid UserRoleId { get; set; }
+
+        [Required]
+        public Guid PermissionId { get; set; }
+
+        public UserRole UserRole { get; set; } = default!;
+        public Permission Permission { get; set; } = default!;
+    }
 }
