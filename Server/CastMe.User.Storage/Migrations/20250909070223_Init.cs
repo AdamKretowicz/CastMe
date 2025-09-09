@@ -41,20 +41,6 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Permissions",
-                schema: "User",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Action = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Resource = table.Column<string>(type: "nvarchar(max)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Permissions", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "UserRoles",
                 schema: "User",
                 columns: table => new
@@ -107,33 +93,6 @@ namespace Infrastructure.Migrations
                         column: x => x.CastingId,
                         principalSchema: "Casting",
                         principalTable: "Castings",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserRolePermissions",
-                schema: "User",
-                columns: table => new
-                {
-                    PermissionsId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    UserRolesId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserRolePermissions", x => new { x.PermissionsId, x.UserRolesId });
-                    table.ForeignKey(
-                        name: "FK_UserRolePermissions_Permissions_PermissionsId",
-                        column: x => x.PermissionsId,
-                        principalSchema: "User",
-                        principalTable: "Permissions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UserRolePermissions_UserRoles_UserRolesId",
-                        column: x => x.UserRolesId,
-                        principalSchema: "User",
-                        principalTable: "UserRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -219,12 +178,6 @@ namespace Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_UserRolePermissions_UserRolesId",
-                schema: "User",
-                table: "UserRolePermissions",
-                column: "UserRolesId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Users_RoleId",
                 schema: "User",
                 table: "Users",
@@ -246,19 +199,11 @@ namespace Infrastructure.Migrations
                 name: "Photos");
 
             migrationBuilder.DropTable(
-                name: "UserRolePermissions",
-                schema: "User");
-
-            migrationBuilder.DropTable(
                 name: "Castings",
                 schema: "Casting");
 
             migrationBuilder.DropTable(
                 name: "Users",
-                schema: "User");
-
-            migrationBuilder.DropTable(
-                name: "Permissions",
                 schema: "User");
 
             migrationBuilder.DropTable(

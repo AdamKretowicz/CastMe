@@ -198,25 +198,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("CastingTags", "Casting");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Permission", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Resource")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Permissions", "User");
-                });
-
             modelBuilder.Entity("Domain.Entities.Photo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -276,21 +257,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("UserRoles", "User");
                 });
 
-            modelBuilder.Entity("PermissionUserRole", b =>
-                {
-                    b.Property<Guid>("PermissionsId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserRolesId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("PermissionsId", "UserRolesId");
-
-                    b.HasIndex("UserRolesId");
-
-                    b.ToTable("UserRolePermissions", "User");
-                });
-
             modelBuilder.Entity("CastMe.Domain.Entities.User", b =>
                 {
                     b.HasOne("Domain.Entities.UserRole", "Role")
@@ -333,21 +299,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("PermissionUserRole", b =>
-                {
-                    b.HasOne("Domain.Entities.Permission", null)
-                        .WithMany()
-                        .HasForeignKey("PermissionsId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.UserRole", null)
-                        .WithMany()
-                        .HasForeignKey("UserRolesId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("CastMe.Domain.Entities.User", b =>

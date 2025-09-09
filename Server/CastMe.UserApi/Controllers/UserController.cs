@@ -140,10 +140,7 @@ namespace CastMe.UserApi.Controllers
             return NoContent();
         }
 
-        /// <summary>Update user status (e.g., Active, Rejected, Pending).</summary>
         [HttpPut("{id}/status")]
-        [ProducesResponseType(typeof(UserDto.Read), 200)]
-        [ProducesResponseType(400)]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UserDto.StatusUpdate dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

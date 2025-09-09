@@ -1,9 +1,5 @@
-﻿using Application.Auth;
-using Application.Interfaces;
-using CastMe.UserApi.Services;
-using Infrastructure.Auth;
+﻿using CastMe.UserApi.Services;
 using Infrastructure.Context;
-using MediatR;
 using WebApi.Services;
 
 namespace CastMe.UserApi.Extensions
@@ -15,11 +11,6 @@ namespace CastMe.UserApi.Extensions
             services.AddDbContext<UserDbContext, UserDbContext>();
             services.AddTransient<UserService>();
             services.AddTransient<CastingService>();
-
-            services.AddScoped<IAuthorizationService, AuthorizationService>();
-            services.AddScoped<ICurrentUserService, CurrentUserService>();
-            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
-
             return services;
         }
     }

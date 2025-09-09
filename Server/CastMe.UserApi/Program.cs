@@ -1,21 +1,20 @@
 ﻿using Application.Auth;
 using Application.Interfaces;
-using Infrastructure.Security;
+using CastMe.Api.Features.Photos;
 using CastMe.UserApi.Services;
 using Infrastructure.Auth;
 using Infrastructure.Context;
+using Infrastructure.Security;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
-using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
 using WebApi.Infrastructure.Email;
+using System.Text;
 using WebApi.Services;
 using WebApi.Services.Photo;
-using CastMe.Api.Features.Photos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,8 +91,6 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddHttpContextAccessor();
-
 
 // Utworzone serwisy 
 builder.Services.AddScoped<UserService>();
@@ -104,20 +101,7 @@ builder.Services.Configure<LocalStorageOptions>(builder.Configuration.GetSection
 builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
-builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
-builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
-
-
 var app = builder.Build();
-
-// Migracje i seeding ról/permów przy starcie
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<UserDbContext>();
-    await RolePermissionSeeder.SeedAsync(context);
-}
-
 
 app.UseStaticFiles();
 
