@@ -11,8 +11,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using WebApi.Infrastructure.Email;
 using System.Text;
+using WebApi.Extensions;
+using WebApi.Infrastructure.Email;
 using WebApi.Services;
 using WebApi.Services.Photo;
 
@@ -102,6 +103,9 @@ builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 var app = builder.Build();
+// Middleware do autoryzacji ról (własny)
+app.UseMiddleware<RoleAuthorizationMiddleware>();
+
 
 app.UseStaticFiles();
 

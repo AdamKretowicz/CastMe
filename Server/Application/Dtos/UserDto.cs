@@ -76,6 +76,8 @@ namespace CastMe.User.CrossCutting.DTOs
             public string ClothingSize { get; set; } = default!;
 
             public string? Description { get; set; }
+
+            public List<string> Roles { get; set; } = new List<string>();
         }
 
         public class Update

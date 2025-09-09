@@ -3,6 +3,7 @@ using Application.Mapper;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Services;
 using WebApi.Endpoints;
+using WebApi.Extensions;
 
 namespace WebApi.Controllers
 {
@@ -25,6 +26,7 @@ namespace WebApi.Controllers
         //<summary>Get all castings.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
+        [RoleAuthorize("Admin", "User")]
         public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetAllUsers()
         {
             var castings = await _castingService.GetAllCastings();

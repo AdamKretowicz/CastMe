@@ -20,10 +20,9 @@ public class UserDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<User>()
-            .HasOne(u => u.Role)
+            .HasMany(u => u.Roles)
             .WithMany(r => r.Users)
-            .HasForeignKey(u => u.RoleId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .UsingEntity(j => j.ToTable("UserRoles"));
     }
 
 

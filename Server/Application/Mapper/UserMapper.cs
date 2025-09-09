@@ -21,7 +21,8 @@ namespace CastMe.UserApi.Mappers
             Description = user.Description,
             Gender = user.Gender,
             HairColor = user.HairColor,
-            ClothingSize = user.ClothingSize
+            ClothingSize = user.ClothingSize,
+            Roles = user.Roles.Select(r => r.Name).ToList()
         };
 
         // CREATE DTO -> ENTITY 

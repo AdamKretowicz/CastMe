@@ -44,9 +44,7 @@ namespace CastMe.Domain.Entities
         public ICollection<Photo> Photos { get; set; } = new List<Photo>();
 
 
-
-        public Guid RoleId { get; set; } 
-        public UserRole Role { get; set; }
+        public ICollection<UserRole> Roles { get; set; } = new List<UserRole>();
 
 
         public UserStatus Status { get; set; } = UserStatus.Pending;

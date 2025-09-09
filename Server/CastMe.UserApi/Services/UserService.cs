@@ -11,11 +11,15 @@ namespace CastMe.UserApi.Services
     {
         private readonly UserDbContext _context;
         private readonly IEmailSender _emailSender;
+        private readonly IUserRepository _userRepo;
+        private readonly IRoleRepository _roleRepo;
 
-        public UserService(UserDbContext context, IEmailSender emailSender)
+        public UserService(UserDbContext context, IEmailSender emailSender, IUserRepository userRepo, IRoleRepository roleRepo)
         {
             _context = context;
             _emailSender = emailSender;
+            _userRepo = userRepo;
+            _roleRepo = roleRepo;
         }
 
         public async Task<IEnumerable<Domain.Entities.User>> GetAllUsers() =>
@@ -83,7 +87,24 @@ namespace CastMe.UserApi.Services
 
         }
 
+        public async Task AssignRoleAsync(Guid userId, string roleName)
+        {
+            var user = await _userRepo.GetByIdAsync(userId);
+            var role = await _roleRepo.GetByNameAsync(roleName);
 
+            if (user == null || role == null) return;
+
+            if (!user.Roles.Contains(role))
+                user.Roles.Add(role);
+
+            await _userRepo.SaveChangesAsync();
+        }
+
+        public bool HasPermission(UserDto.Read user, string permission)
+        {
+            // Tu logika np. sprawdzania uprawnień na podstawie ról
+            return user.Roles.Contains(permission);
+        }
 
 
     }
