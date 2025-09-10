@@ -71,8 +71,8 @@ namespace Infrastructure.Migrations
     {
         {
             user1Id,
-            "sophia_model",
-            BCrypt.Net.BCrypt.HashPassword("password123"),
+            "admin",
+            BCrypt.Net.BCrypt.HashPassword("admin"),
             "Sophia",
             "Martinez",
             "+1-555-0101",
@@ -314,6 +314,61 @@ namespace Infrastructure.Migrations
                         casting3Id,
                         "Commercial"
                     }
+                });
+            // Seed CastingAssignments
+            migrationBuilder.InsertData(
+                schema: "Casting",
+                table: "CastingAssignments",
+                columns: new[] { "Id", "CastingId", "RoleId", "UserId" },
+                values: new object[,]
+                {
+        // Summer Fashion Campaign 2025 assignments
+        {
+            Guid.NewGuid(), // assignment1Id
+            casting1Id,
+            modelRoleId,    // UserRole: Model
+            user1Id         // Sophia
+        },
+        {
+            Guid.NewGuid(), // assignment2Id
+            casting1Id,
+            photographerRoleId, // UserRole: Photographer
+            user2Id             // Alex
+        },
+        {
+            Guid.NewGuid(), // assignment3Id
+            casting1Id,
+            designerRoleId, // UserRole: Designer or volunteerRoleId if needed
+            user3Id
+        },
+
+        // Independent Film Production assignments
+        {
+            Guid.NewGuid(), // assignment4Id
+            casting2Id,
+            modelRoleId,    // UserRole: Model
+            user1Id
+        },
+        {
+            Guid.NewGuid(), // assignment5Id
+            casting2Id,
+            designerRoleId, // UserRole: Designer
+            user3Id
+        },
+
+        // Commercial Photography Workshop assignments
+        {
+            Guid.NewGuid(), // assignment6Id
+            casting3Id,
+            photographerRoleId, // UserRole: Photographer
+            user2Id
+        },
+        {
+            Guid.NewGuid(), // assignment7Id
+            casting3Id,
+            modelRoleId,    // UserRole: Model
+            user1Id
+        }
                 });
 
         }

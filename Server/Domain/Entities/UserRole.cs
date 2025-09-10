@@ -19,5 +19,7 @@ namespace Domain.Entities
 
         [Required]
         public ICollection<User> Users { get; set; } = new List<User>();
+        public ICollection<CastingAssignment> Assignments { get; set; } = new List<CastingAssignment>();
     }
 }
+

@@ -53,6 +53,8 @@ namespace CastMe.User.CrossCutting.DTOs
 
             [Required, MinLength(6)]
             public string Password { get; set; } = default!;
+
+            public string Role { get; set; } = "Model";
         }
 
         public class Read

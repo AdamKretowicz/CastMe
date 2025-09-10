@@ -28,5 +28,10 @@ namespace Infrastructure.Repositories
                         await _context.UserRoles
                           .Include(r => r.Users)
                           .FirstOrDefaultAsync(r => r.Name == roleName);
+
+        public async Task<UserRole?> GetByIdAsync(Guid roleId) =>
+                        await _context.UserRoles
+                          .Include(r => r.Users)
+                          .FirstOrDefaultAsync(r => r.Id == roleId);
     }
 }

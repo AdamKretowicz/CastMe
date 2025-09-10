@@ -11,6 +11,7 @@ namespace Application.Interfaces
     public interface IRoleRepository
     {
         Task<UserRole?> GetByNameAsync(string roleName);
+        Task<UserRole?> GetByIdAsync(Guid roleId);
         Task<IEnumerable<UserRole>> GetAllAsync();
     }
 }

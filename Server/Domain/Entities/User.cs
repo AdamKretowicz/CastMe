@@ -49,6 +49,8 @@ namespace CastMe.Domain.Entities
 
 
         public UserStatus Status { get; set; } = UserStatus.Pending;
-            
+
+        public ICollection<CastingAssignment> Assignments { get; set; } = new List<CastingAssignment>();
+
     }
 }

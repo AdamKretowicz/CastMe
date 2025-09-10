@@ -63,7 +63,10 @@ namespace CastMe.UserApi.Controllers
             // Hash hasła w warstwie serwisu bezpieczeństwa – nie w mapperze
             var passwordHash = _passwordHasher.Hash(dto.Password);
 
-            var entity = dto.ToEntity(passwordHash);
+            var role = _userService.GetRoleByName(dto.Role);
+
+
+            var entity = dto.ToEntity(passwordHash, role.Result.Id);
             await _userService.Add(entity);
 
             return CreatedAtAction(
@@ -172,5 +175,16 @@ namespace CastMe.UserApi.Controllers
             
         }
 
+
+        /// <summary>Get All Roles</summary>
+        [HttpGet("roles")]
+        [ProducesResponseType(typeof(IEnumerable<object>), 200)]
+        public async Task<IActionResult> GetAllRoles()
+        {
+            var roles = await _userService.GetAllRoles();
+            var rolesDto = roles.Select(r => new { r.Name });
+
+            return Ok(rolesDto);
+        }
     }
 }

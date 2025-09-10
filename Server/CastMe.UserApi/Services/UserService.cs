@@ -91,6 +91,10 @@ namespace CastMe.UserApi.Services
         public async Task<IEnumerable<UserRole>> GetAllRoles() =>
             await _roleRepo.GetAllAsync();
 
+        public async Task<UserRole?> GetRoleById(Guid id) =>
+            await _roleRepo.GetByIdAsync(id);
 
+        public async Task<UserRole?> GetRoleByName(string name) =>
+            await _roleRepo.GetByNameAsync(name);
     }
 }

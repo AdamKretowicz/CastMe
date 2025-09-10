@@ -134,6 +134,40 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CastingAssignments",
+                schema: "Casting",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CastingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CastingAssignments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CastingAssignments_Castings_CastingId",
+                        column: x => x.CastingId,
+                        principalSchema: "Casting",
+                        principalTable: "Castings",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CastingAssignments_UserRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalSchema: "User",
+                        principalTable: "UserRoles",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_CastingAssignments_Users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "User",
+                        principalTable: "Users",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Photos",
                 columns: table => new
                 {
@@ -159,6 +193,24 @@ namespace Infrastructure.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CastingAssignments_CastingId",
+                schema: "Casting",
+                table: "CastingAssignments",
+                column: "CastingId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CastingAssignments_RoleId",
+                schema: "Casting",
+                table: "CastingAssignments",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CastingAssignments_UserId",
+                schema: "Casting",
+                table: "CastingAssignments",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CastingRoles_CastingId",
@@ -187,6 +239,10 @@ namespace Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "CastingAssignments",
+                schema: "Casting");
+
             migrationBuilder.DropTable(
                 name: "CastingRoles",
                 schema: "Casting");

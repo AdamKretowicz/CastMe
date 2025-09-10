@@ -10,5 +10,8 @@
         public const string Update = basePath + "/{id:guid}";
         public const string Delete = basePath + "/{id:guid}";
         public const string GetByOrganiserId = basePath + "/organiser/{userId:guid}";
+        public const string GetParticipantsByCastingId = basePath + "/participants/{id:guid}";
+        public const string AddParticipant = basePath + "/{castingId:guid}/participant/{userId:guid}";
+        public const string RemoveParticipant = basePath + "/{castingId:guid}/participant/{userId:guid}";
     }
 }

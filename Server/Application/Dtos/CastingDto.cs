@@ -104,5 +104,14 @@ namespace Application.Dtos
             public int Capacity { get; set; }
             public int AcceptedCount { get; set; }
         }
+
+        public class ReadParticipants
+        {
+            public Guid CastingId { get; set; }
+            public Dictionary<string, string> Participants { get; set; } = new Dictionary<string, string>();
+        }
+
+
+
     }
 }
