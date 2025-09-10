@@ -26,7 +26,7 @@ namespace WebApi.Controllers
         //<summary>Get all castings.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
-        [RoleAuthorize("Admin", "User")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetAllUsers()
         {
             var castings = await _castingService.GetAllCastings();
@@ -37,6 +37,7 @@ namespace WebApi.Controllers
         [HttpGet(Endpoints.CastingEndpoints.GetById)]
         [ProducesResponseType(typeof(CastingDto.Read), 200)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var casting = await _castingService.GetById(id);
@@ -48,6 +49,7 @@ namespace WebApi.Controllers
         [HttpGet(Endpoints.CastingEndpoints.GetByOrganiserId)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetByOrganiserId([FromRoute] Guid userId)
         {
             var castings = await _castingService.GetCastingsByOrganiserId(userId);
@@ -58,6 +60,7 @@ namespace WebApi.Controllers
         [HttpPost(Endpoints.CastingEndpoints.Create)]
         [ProducesResponseType(typeof(CastingDto.Read), 201)]
         [ProducesResponseType(400)]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> Create([FromBody] CastingDto.Create dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -72,6 +75,7 @@ namespace WebApi.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> Update(Guid id, [FromBody] CastingDto.Update dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -87,6 +91,7 @@ namespace WebApi.Controllers
         [HttpDelete(Endpoints.CastingEndpoints.Delete)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var existingCasting = await _castingService.GetById(id);

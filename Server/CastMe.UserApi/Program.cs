@@ -4,6 +4,7 @@ using CastMe.Api.Features.Photos;
 using CastMe.UserApi.Services;
 using Infrastructure.Auth;
 using Infrastructure.Context;
+using Infrastructure.Repositories;
 using Infrastructure.Security;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
@@ -102,9 +103,12 @@ builder.Services.Configure<LocalStorageOptions>(builder.Configuration.GetSection
 builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+
+
 var app = builder.Build();
-// Middleware do autoryzacji ról (własny)
-app.UseMiddleware<RoleAuthorizationMiddleware>();
+
 
 
 app.UseStaticFiles();
@@ -117,6 +121,9 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();   // WAŻNE: przed UseAuthorization
 app.UseAuthorization();
+
+// Middleware do autoryzacji ról (własny)
+app.UseMiddleware<RoleAuthorizationMiddleware>();
 
 app.MapControllers();
 

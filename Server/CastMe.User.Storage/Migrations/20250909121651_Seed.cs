@@ -9,8 +9,7 @@ namespace Infrastructure.Migrations
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            // Generate GUIDs for UserRoles
+        {// Generate GUIDs for UserRoles
             var modelRoleId = Guid.NewGuid();
             var adminRoleId = Guid.NewGuid();
             var photographerRoleId = Guid.NewGuid();
@@ -65,72 +64,74 @@ namespace Infrastructure.Migrations
 
             // Seed Users
             migrationBuilder.InsertData(
-                schema: "User",
-                table: "Users",
-                columns: new[] { "Id", "UserName", "PasswordHash", "FirstName", "LastName", "Phone", "DateOfBirth", "Height", "Weight", "Email", "Country", "City", "Description", "Gender", "HairColor", "ClothingSize", "RoleId", "Status" },
-                values: new object[,]
-                {
-                    {
-                        user1Id,
-                        "sophia_model",
-                        "$2a$11$K2x4Z9.ZVL7JJ8KwP2eqrO7yX1nB3mF4wE5qC6aH8vI9gT2pL0xYm", // bcrypt hash for "password123"
-                        "Sophia",
-                        "Martinez",
-                        "+1-555-0101",
-                        new DateTime(1995, 6, 15),
-                        170,
-                        55,
-                        "sophia.martinez@email.com",
-                        "USA",
-                        "Los Angeles",
-                        "Professional fashion model with 5+ years experience in runway and commercial photography.",
-                        0, // Female
-                        "Blonde",
-                        "S",
-                        modelRoleId, // Model role
-                        1 // Active
-                    },
-                    {
-                        user2Id,
-                        "alex_photographer",
-                        "$2a$11$K2x4Z9.ZVL7JJ8KwP2eqrO7yX1nB3mF4wE5qC6aH8vI9gT2pL0xYm",
-                        "Alex",
-                        "Johnson",
-                        "+1-555-0202",
-                        new DateTime(1988, 3, 22),
-                        178,
-                        72,
-                        "alex.johnson@email.com",
-                        "USA",
-                        "New York",
-                        "Creative photographer specializing in fashion and portrait photography with modern techniques.",
-                        1, // Male
-                        "Brown",
-                        "M",
-                        photographerRoleId, // Photographer role
-                        1 // Active
-                    },
-                    {
-                        user3Id,
-                        "emma_admin",
-                        "$2a$11$K2x4Z9.ZVL7JJ8KwP2eqrO7yX1nB3mF4wE5qC6aH8vI9gT2pL0xYm",
-                        "Emma",
-                        "Davis",
-                        "+1-555-0303",
-                        new DateTime(1990, 11, 8),
-                        165,
-                        60,
-                        "emma.davis@email.com",
-                        "USA",
-                        "Chicago",
-                        "Experienced casting director and event coordinator with expertise in talent management.",
-                        0, // Female
-                        "Red",
-                        "M",
-                        adminRoleId, // Admin role
-                        1 // Active
-                    }
-                });
+    schema: "User",
+    table: "Users",
+    columns: new[] { "Id", "UserName", "PasswordHash", "FirstName", "LastName", "Phone", "DateOfBirth", "Height", "Weight", "Email", "Country", "City", "Description", "Gender", "HairColor", "ClothingSize", "Status", "RoleId" },
+    values: new object[,]
+    {
+        {
+            user1Id,
+            "sophia_model",
+            BCrypt.Net.BCrypt.HashPassword("password123"),
+            "Sophia",
+            "Martinez",
+            "+1-555-0101",
+            new DateTime(1995, 6, 15),
+            170,
+            55,
+            "sophia.martinez@email.com",
+            "USA",
+            "Los Angeles",
+            "Professional fashion model with 5+ years experience in runway and commercial photography.",
+            0, // Female
+            "Blonde",
+            "S",
+            1, // Active,
+            adminRoleId,
+
+        },
+        {
+            user2Id,
+            "alex_photographer",
+            BCrypt.Net.BCrypt.HashPassword("password123"),
+            "Alex",
+            "Johnson",
+            "+1-555-0202",
+            new DateTime(1988, 3, 22),
+            178,
+            72,
+            "alex.johnson@email.com",
+            "USA",
+            "New York",
+            "Creative photographer specializing in fashion and portrait photography with modern techniques.",
+            1, // Male
+            "Brown",
+            "M",
+            1, // Active
+            photographerRoleId
+        },
+        {
+            user3Id,
+            "emma_admin",
+            BCrypt.Net.BCrypt.HashPassword("password123"),
+            "Emma",
+            "Davis",
+            "+1-555-0303",
+            new DateTime(1990, 11, 8),
+            165,
+            60,
+            "emma.davis@email.com",
+            "USA",
+            "Chicago",
+            "Experienced casting director and event coordinator with expertise in talent management.",
+            0, // Female
+            "Red",
+            "M",
+            1, // Active
+            designerRoleId,
+        }
+    });
+
 
             // Seed Castings
             migrationBuilder.InsertData(
@@ -314,12 +315,13 @@ namespace Infrastructure.Migrations
                         "Commercial"
                     }
                 });
+
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            
+
         }
     }
 }

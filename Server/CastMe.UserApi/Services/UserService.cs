@@ -87,23 +87,10 @@ namespace CastMe.UserApi.Services
 
         }
 
-        public async Task AssignRoleAsync(Guid userId, string roleName)
-        {
-            var user = await _userRepo.GetByIdAsync(userId);
-            var role = await _roleRepo.GetByNameAsync(roleName);
-
-            if (user == null || role == null) return;
-
-            if (!user.Roles.Contains(role))
-                user.Roles.Add(role);
-
-            await _userRepo.SaveChangesAsync();
-        }
-
         public bool HasPermission(UserDto.Read user, string permission)
         {
             // Tu logika np. sprawdzania uprawnień na podstawie ról
-            return user.Roles.Contains(permission);
+            return user.Role == permission;
         }
 
 

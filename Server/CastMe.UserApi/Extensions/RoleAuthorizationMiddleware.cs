@@ -14,7 +14,7 @@ namespace WebApi.Extensions
             if (userIdClaim != null)
             {
                 var user = await userRepo.GetByIdAsync(Guid.Parse(userIdClaim));
-                context.Items["UserRoles"] = user?.Roles.Select(r => r.Name).ToList();
+                context.Items["UserRoles"] = user?.Role.Name;
             }
 
             await _next(context);

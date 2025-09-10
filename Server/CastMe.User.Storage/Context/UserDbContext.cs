@@ -20,9 +20,9 @@ public class UserDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<User>()
-            .HasMany(u => u.Roles)
+            .HasOne(u => u.Role)
             .WithMany(r => r.Users)
-            .UsingEntity(j => j.ToTable("UserRoles"));
+            .HasForeignKey(u => u.RoleId);
     }
 
 

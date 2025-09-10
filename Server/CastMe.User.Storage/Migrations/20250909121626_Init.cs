@@ -130,7 +130,7 @@ namespace Infrastructure.Migrations
                         principalSchema: "User",
                         principalTable: "UserRoles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(

@@ -1,10 +1,11 @@
-﻿using CastMe.UserApi.Services;
+﻿using Application.Auth;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
+using CastMe.UserApi.Services;
+using Domain.Entities;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
-using Application.Auth;
-using Domain.Entities;
+using WebApi.Extensions;
 
 namespace CastMe.UserApi.Controllers
 {
@@ -31,6 +32,7 @@ namespace CastMe.UserApi.Controllers
         /// <summary>Get all users.</summary>
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<ActionResult<IEnumerable<UserDto.Read>>> GetAllUsers()
         {
             var users = await _userService.GetAllUsers();
@@ -41,6 +43,7 @@ namespace CastMe.UserApi.Controllers
         [HttpGet("{id:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var user = await _userService.GetById(id);
@@ -52,6 +55,7 @@ namespace CastMe.UserApi.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(UserDto.Read), 201)]
         [ProducesResponseType(400)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> Create([FromBody] UserDto.Create dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -74,6 +78,7 @@ namespace CastMe.UserApi.Controllers
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> Edit(Guid id, [FromBody] UserDto.Update dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -92,6 +97,7 @@ namespace CastMe.UserApi.Controllers
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> Patch(Guid id, [FromBody] JsonPatchDocument<UserDto.Update> patchDoc)
         {
             if (patchDoc is null) return BadRequest();
@@ -131,16 +137,28 @@ namespace CastMe.UserApi.Controllers
         [HttpDelete("{id:guid}")]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> Delete(Guid id)
         {
             var user = await _userService.GetById(id);
             if (user is null) return NotFound();
 
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
+            if (currentUserId is null)
+                return Forbid(); 
+
+            if (!User.IsInRole("Admin") && currentUserId != id.ToString())
+                return Forbid();
+
             await _userService.Delete(id);
             return NoContent();
         }
-
+        //<summary>Update user status (Admin only).</summary>
         [HttpPut("{id}/status")]
+        [ProducesResponseType(typeof(UserDto.Read), 200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UserDto.StatusUpdate dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

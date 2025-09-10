@@ -77,7 +77,7 @@ namespace CastMe.User.CrossCutting.DTOs
 
             public string? Description { get; set; }
 
-            public List<string> Roles { get; set; } = new List<string>();
+            public string Role { get; set; } = default!;
         }
 
         public class Update
