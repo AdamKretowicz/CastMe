@@ -1,4 +1,6 @@
-﻿using CastMe.UserApi.Services;
+﻿using CastMe.Domain.Entities;
+using CastMe.UserApi.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using System.Security.Claims;
@@ -24,7 +26,8 @@ namespace WebApi.Extensions
 
 
             //var userIdClaim = httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var userIdClaim = httpContext.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+            //var userIdClaim = httpContext.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+            var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
             {
@@ -34,9 +37,21 @@ namespace WebApi.Extensions
 
 
             var user = await _userService.GetById(Guid.Parse(userIdClaim));
-            var userRole = user?.Role?.Name;
+            if (user == null)
+            {
+                context.Result = new ForbidResult();
+                return;
+            }
 
-            if (userRole == null || !_roles.Contains(userRole))
+            var userRoleId = user?.RoleId;
+            var allRoles = await _userService.GetAllRoles();
+
+            var userRole = allRoles.FirstOrDefault(r => r.Id == userRoleId);
+
+            var userRoleName = userRole?.Name;
+
+
+            if (userRole == null || !_roles.Contains(userRoleName))
             {
                 context.Result = new ForbidResult();
                 return;

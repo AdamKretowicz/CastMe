@@ -17,7 +17,7 @@ namespace Infrastructure.Repositories
         public UserRepository(UserDbContext context) => _context = context;
 
         public async Task<User?> GetByIdAsync(Guid id) =>
-            await _context.Users.Include(u => u.UserName)
+            await _context.Users.Include(u => u.Role)
                                 .FirstOrDefaultAsync(u => u.Id == id);
 
         public async Task AddAsync(User user) => await _context.Users.AddAsync(user);

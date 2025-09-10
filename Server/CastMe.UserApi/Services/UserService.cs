@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using CastMe.Domain.Entities;
 using CastMe.User.CrossCutting.DTOs;
+using Domain.Entities;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -87,11 +88,8 @@ namespace CastMe.UserApi.Services
 
         }
 
-        public bool HasPermission(UserDto.Read user, string permission)
-        {
-            // Tu logika np. sprawdzania uprawnień na podstawie ról
-            return user.Role == permission;
-        }
+        public async Task<IEnumerable<UserRole>> GetAllRoles() =>
+            await _roleRepo.GetAllAsync();
 
 
     }
