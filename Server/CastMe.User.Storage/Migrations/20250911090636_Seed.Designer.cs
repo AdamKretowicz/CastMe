@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(UserDbContext))]
-    [Migration("20250910125849_Seed")]
+    [Migration("20250911090636_Seed")]
     partial class Seed
     {
         /// <inheritdoc />
@@ -30,6 +30,9 @@ namespace Infrastructure.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("AcceptedTerms")
+                        .HasColumnType("bit");
 
                     b.Property<string>("City")
                         .IsRequired()

@@ -12,6 +12,7 @@ namespace WebApi.Extensions
     {
         private readonly string[] _roles;
         private readonly UserService _userService;
+        
 
 
         public RoleAuthorizeFilter(string[] roles, UserService userService)
@@ -25,8 +26,6 @@ namespace WebApi.Extensions
             var httpContext = context.HttpContext;
 
 
-            //var userIdClaim = httpContext.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            //var userIdClaim = httpContext.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
             var userIdClaim = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
@@ -42,16 +41,29 @@ namespace WebApi.Extensions
                 context.Result = new ForbidResult();
                 return;
             }
+            
+            
 
-            var userRoleId = user?.RoleId;
-            var allRoles = await _userService.GetAllRoles();
+            if (user?.RoleId == null)
+            {
+                context.Result = new ForbidResult();
+                return;
+            }
 
-            var userRole = allRoles.FirstOrDefault(r => r.Id == userRoleId);
+            var userRoleId = user.RoleId;
 
-            var userRoleName = userRole?.Name;
+            var role = await _userService.GetRoleById(userRoleId);
+            var userRoleName = role?.Name;
+
+            if (user.Status != UserStatus.Active && userRoleName != "Admin")
+            {
+
+                context.Result = new ForbidResult();
+                return;
+            }
 
 
-            if (userRole == null || !_roles.Contains(userRoleName))
+            if (!_roles.Contains(userRoleName))
             {
                 context.Result = new ForbidResult();
                 return;

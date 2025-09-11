@@ -22,7 +22,8 @@ namespace CastMe.UserApi.Mappers
             Gender = user.Gender,
             HairColor = user.HairColor,
             ClothingSize = user.ClothingSize,
-            Role = user.Role.Name,
+            Role = user.Role?.Name ?? "Unknown",
+
         };
 
         // CREATE DTO -> ENTITY 
@@ -46,8 +47,9 @@ namespace CastMe.UserApi.Mappers
                 HairColor = dto.HairColor,
                 ClothingSize = dto.ClothingSize,
                 PasswordHash = passwordHash,
-                RoleId = roleId
-                
+                RoleId = roleId,
+                AcceptedTerms = dto.AcceptTerms,
+                Status = Domain.Entities.UserStatus.Pending
             };
         }
 

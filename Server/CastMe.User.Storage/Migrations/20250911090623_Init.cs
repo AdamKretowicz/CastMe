@@ -119,7 +119,8 @@ namespace Infrastructure.Migrations
                     HairColor = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ClothingSize = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false)
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    AcceptedTerms = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {

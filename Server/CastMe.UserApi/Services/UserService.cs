@@ -5,6 +5,7 @@ using CastMe.User.CrossCutting.DTOs;
 using Domain.Entities;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using WebApi.Services.Photo;
 
 namespace CastMe.UserApi.Services
 {
@@ -14,6 +15,7 @@ namespace CastMe.UserApi.Services
         private readonly IEmailSender _emailSender;
         private readonly IUserRepository _userRepo;
         private readonly IRoleRepository _roleRepo;
+        private readonly IPhotoService _photoService;
 
         public UserService(UserDbContext context, IEmailSender emailSender, IUserRepository userRepo, IRoleRepository roleRepo)
         {
@@ -22,12 +24,17 @@ namespace CastMe.UserApi.Services
             _userRepo = userRepo;
             _roleRepo = roleRepo;
         }
-
         public async Task<IEnumerable<Domain.Entities.User>> GetAllUsers() =>
-            await _context.Users.AsNoTracking().ToListAsync();
+            await _context.Users
+            .Include(u => u.Role)
+            .AsNoTracking().ToListAsync();
+        public async Task<IEnumerable<Domain.Entities.User>> GetAllUsers(UserStatus status) =>
+            await _context.Users.Where(s => s.Status == status).Include(u => u.Role).AsNoTracking().ToListAsync();
 
         public async Task<Domain.Entities.User?> GetById(Guid id) =>
-            await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
+            await _context.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
+        public async Task<Domain.Entities.User?> GetActiveById(Guid id) =>
+            await _context.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id && u.Status == UserStatus.Active);
 
         public async Task Add(Domain.Entities.User entity)
         {
@@ -75,6 +82,17 @@ namespace CastMe.UserApi.Services
                     Message = emailMessage,
                 };
 
+                if (newStatus == UserStatus.Rejected)
+                {
+                    var photos = await _photoService.GetUserPhotosAsync(user.Id);
+                    foreach (var photo in photos)
+                    {
+                        await _photoService.DeleteAsync(user.Id, photo.Id);
+                    }
+
+                }
+
+
                 await _emailSender.SendEmailAsync(email);
                 return user; // Status updated successfully
             }
@@ -88,13 +106,29 @@ namespace CastMe.UserApi.Services
 
         }
 
-        public async Task<IEnumerable<UserRole>> GetAllRoles() =>
-            await _roleRepo.GetAllAsync();
+        public async Task<IEnumerable<UserRole>> GetAllRoles()
+        {
+           var roles = await _roleRepo.GetAllAsync();
+            roles = roles.Where(r => r.Name != "Admin");
+            return roles;
+        }
 
         public async Task<UserRole?> GetRoleById(Guid id) =>
             await _roleRepo.GetByIdAsync(id);
 
         public async Task<UserRole?> GetRoleByName(string name) =>
             await _roleRepo.GetByNameAsync(name);
+
+        public async Task<UserRole> GetRoleByUserId(Guid userId)
+        {
+            var user = await _userRepo.GetByIdAsync(userId);
+            if (user == null || user.RoleId == null)
+                throw new Exception("User or Role not found");
+
+            var role = await _roleRepo.GetByIdAsync(user.RoleId);
+            if (role == null)
+                throw new Exception("Role not found");
+            return role;
+        }
     }
 }

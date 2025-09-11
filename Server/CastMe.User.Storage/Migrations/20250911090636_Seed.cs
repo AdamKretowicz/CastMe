@@ -66,7 +66,7 @@ namespace Infrastructure.Migrations
             migrationBuilder.InsertData(
     schema: "User",
     table: "Users",
-    columns: new[] { "Id", "UserName", "PasswordHash", "FirstName", "LastName", "Phone", "DateOfBirth", "Height", "Weight", "Email", "Country", "City", "Description", "Gender", "HairColor", "ClothingSize", "Status", "RoleId" },
+    columns: new[] { "Id", "UserName", "PasswordHash", "FirstName", "LastName", "Phone", "DateOfBirth", "Height", "Weight", "Email", "Country", "City", "Description", "Gender", "HairColor", "ClothingSize", "Status", "RoleId", "AcceptedTerms" },
     values: new object[,]
     {
         {
@@ -88,6 +88,7 @@ namespace Infrastructure.Migrations
             "S",
             1, // Active,
             adminRoleId,
+            true,
 
         },
         {
@@ -108,7 +109,8 @@ namespace Infrastructure.Migrations
             "Brown",
             "M",
             1, // Active
-            photographerRoleId
+            photographerRoleId,
+            true,
         },
         {
             user3Id,
@@ -129,6 +131,7 @@ namespace Infrastructure.Migrations
             "M",
             1, // Active
             designerRoleId,
+            true,
         }
     });
 
