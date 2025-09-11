@@ -29,6 +29,7 @@ namespace CastMe.Domain.Entities
         public DateTime DateOfBirth { get; set; }
         public int Height { get; set; }
         public int Weight { get; set; }
+        [EmailAddress]
         public string Email { get; set; } = default!;
         public string Country { get; set; } = default!;
         public string City { get; set; } = default!;
@@ -51,6 +52,10 @@ namespace CastMe.Domain.Entities
         public UserStatus Status { get; set; } = UserStatus.Pending;
 
         public ICollection<CastingAssignment> Assignments { get; set; } = new List<CastingAssignment>();
+
+        [Required]
+        [AllowedValues(new object[] { true })]
+        public bool AcceptedTerms { get; set; }
 
     }
 }

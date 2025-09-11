@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Application.Auth;
+using CastMe.Api.Features.Photos;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
 using CastMe.UserApi.Services;
@@ -7,6 +8,7 @@ using Infrastructure.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using WebApi.Services.Photo;
 
 namespace WebApi.Controllers
 {
@@ -20,13 +22,16 @@ namespace WebApi.Controllers
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtTokenService _tokenService;
         private readonly UserService _userService;
+        private readonly IPhotoService _photoService;
 
-        public AuthController(UserDbContext db, IPasswordHasher passwordHasher, IJwtTokenService tokenService, UserService userService)
+        public AuthController(UserDbContext db, IPasswordHasher passwordHasher,
+            IJwtTokenService tokenService, UserService userService, IPhotoService photoService)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
             _userService = userService;
+            _photoService = photoService;
         }
 
         [HttpPost("register")]
@@ -34,35 +39,68 @@ namespace WebApi.Controllers
         [Tags("Register")]
         [ProducesResponseType(typeof(UserDto.Read), 201)]
         [ProducesResponseType(400)]
-        public async Task<IActionResult> Register([FromBody] UserDto.Create dto)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> Register([FromForm] UserDto.Create dto, CancellationToken ct = default)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            if (dto.Photos == null || dto.Photos.Length == 0)
+                return BadRequest(new { message = "Musisz przesłać co najmniej jedno zdjęcie." });
 
             // Unikalność username/email
             var exists = await _db.Users
                 .AsNoTracking()
-                .AnyAsync(u => u.UserName == dto.UserName || u.Email == dto.Email);
+                .AnyAsync(u => u.UserName.ToLower() == dto.UserName.ToLower() 
+                || u.Email.ToLower() == dto.Email.ToLower(),ct);
 
             if (exists)
                 return BadRequest(new { message = "UserName or Email already in use." });
 
-            // Hash hasła i utworzenie encji
+            // Hash hasła
             var passwordHash = _passwordHasher.Hash(dto.Password);
 
-            var userRole = _userService.GetRoleByName(dto.Role);
+            // Pobranie roli
+            var userRole = await _userService.GetRoleByName(dto.RoleName);
+            if (userRole == null|| dto.RoleName == "Admin")
+                return BadRequest(new { message = "Wybrana rola nie istnieje." });
 
-            var entity = dto.ToEntity(passwordHash,userRole.Result.Id);
+            // Tworzymy encję użytkownika
+            var entity = dto.ToEntity(passwordHash, userRole.Id);
 
-            _db.Users.Add(entity);
-            await _db.SaveChangesAsync();
 
-            // (Opcjonalnie) od razu wystaw token, żeby frontend mógł zalogować usera po rejestracji
-            var claims = new List<Claim>
+            using var tx = await _db.Database.BeginTransactionAsync();
+            try
             {
-                new(ClaimTypes.NameIdentifier, entity.Id.ToString()),
-                new(ClaimTypes.Name, entity.UserName),
-                new(ClaimTypes.Email, entity.Email)
-            };
+                _db.Users.Add(entity);
+                await _db.SaveChangesAsync();
+
+                // Upload zdjęć
+                bool first = true;
+                foreach (var file in dto.Photos)
+                {
+                    var photo = await _photoService.UploadAsync(entity.Id, file);
+                    if (first)
+                    {
+                        await _photoService.SetMainAsync(entity.Id, photo.Id);
+                        first = false;
+                    }
+                }
+
+                await tx.CommitAsync();
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+
+            var claims = new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, entity.Id.ToString()),
+            new(ClaimTypes.Name, entity.UserName),
+            new(ClaimTypes.Email, entity.Email)
+        };
             var (accessToken, expiresAtUtc, refreshToken) = _tokenService.CreateTokens(claims);
 
             return Created($"/user/{entity.Id}", new

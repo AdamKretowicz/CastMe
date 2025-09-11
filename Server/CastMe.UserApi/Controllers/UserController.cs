@@ -1,4 +1,5 @@
 ﻿using Application.Auth;
+using CastMe.Domain.Entities;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
 using CastMe.UserApi.Services;
@@ -30,23 +31,75 @@ namespace CastMe.UserApi.Controllers
         }
 
         /// <summary>Get all users.</summary>
-        [HttpGet]
+        [HttpGet("/GetAll")]
         [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
-        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [RoleAuthorize("Admin")]
         public async Task<ActionResult<IEnumerable<UserDto.Read>>> GetAllUsers()
         {
             var users = await _userService.GetAllUsers();
             return Ok(users.Select(u => u.ToReadDto()));
         }
 
+        /// <summary>Get all users by status.</summary>
+        [HttpGet("{status}")]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [RoleAuthorize("Admin")]
+        public async Task<ActionResult<IEnumerable<UserDto.Read>>> GetAllUsersByStatus(UserStatus status)
+        {
+            UserStatus statusValue;
+            switch (status.ToString()?.ToLower())
+            {
+                case "active":
+                    statusValue = UserStatus.Active;
+                    break;
+
+                case "pending":
+                    statusValue = UserStatus.Pending;
+                    break;
+
+                case "rejected":
+                    statusValue = UserStatus.Rejected;
+                    break;
+
+                default:
+                    BadRequest(new { message = "Invalid status. Allowed values are: active, pending, rejected." });
+                    throw new Exception("Wrong Status");
+
+            }
+            var users = await _userService.GetAllUsers(statusValue);
+            return Ok(users.Select(u => u.ToReadDto()));
+        }
+
+        /// <summary>Get all active users.</summary>
+        [HttpGet("/GetActive")]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        public async Task<ActionResult<IEnumerable<UserDto.Read>>> GetAllActiveUsers()
+        {
+            var users = await _userService.GetAllUsers(UserStatus.Active);
+            return Ok(users.Select(u => u.ToReadDto()));
+        }
+
         /// <summary>Get user by Id.</summary>
-        [HttpGet("{id:guid}")]
+        [HttpGet("/GetAll/{id:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(404)]
-        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var user = await _userService.GetById(id);
+            if (user is null) return NotFound();
+            return Ok(user.ToReadDto());
+        }
+
+        /// <summary>Get Active user by Id.</summary>
+        [HttpGet("/GetActive/{id:guid}")]
+        [ProducesResponseType(typeof(UserDto.Read), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        public async Task<IActionResult> GetActiveById(Guid id)
+        {
+            var user = await _userService.GetActiveById(id);
             if (user is null) return NotFound();
             return Ok(user.ToReadDto());
         }
@@ -55,7 +108,7 @@ namespace CastMe.UserApi.Controllers
         [HttpPost]
         [ProducesResponseType(typeof(UserDto.Read), 201)]
         [ProducesResponseType(400)]
-        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> Create([FromBody] UserDto.Create dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -63,7 +116,7 @@ namespace CastMe.UserApi.Controllers
             // Hash hasła w warstwie serwisu bezpieczeństwa – nie w mapperze
             var passwordHash = _passwordHasher.Hash(dto.Password);
 
-            var role = _userService.GetRoleByName(dto.Role);
+            var role = _userService.GetRoleByName(dto.RoleName);
 
 
             var entity = dto.ToEntity(passwordHash, role.Result.Id);
@@ -86,6 +139,13 @@ namespace CastMe.UserApi.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
+            if (currentUserId is null)
+                return Forbid();
+
+            if (!User.IsInRole("Admin") && currentUserId != id.ToString())
+                return Forbid();
+
             var existingUser = await _userService.GetById(id);
             if (existingUser is null) return NotFound();
 
@@ -103,6 +163,13 @@ namespace CastMe.UserApi.Controllers
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> Patch(Guid id, [FromBody] JsonPatchDocument<UserDto.Update> patchDoc)
         {
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
+            if (currentUserId is null)
+                return Forbid();
+
+            if (!User.IsInRole("Admin") && currentUserId != id.ToString())
+                return Forbid();
+
             if (patchDoc is null) return BadRequest();
 
             var user = await _userService.GetById(id);
@@ -157,19 +224,19 @@ namespace CastMe.UserApi.Controllers
             return NoContent();
         }
         //<summary>Update user status (Admin only).</summary>
-        [HttpPut("{id}/status")]
+        [HttpPut("{userId}/statusUpdate")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin")]
-        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] UserDto.StatusUpdate dto)
+        public async Task<IActionResult> UpdateStatus(Guid userId, [FromBody] UserDto.StatusUpdate dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var existingUser = await _userService.GetById(id);
+            var existingUser = await _userService.GetById(userId);
             if (existingUser is null) return NotFound();
 
-            var resultUser = await _userService.UpdateUserStatusAsync(id,dto.Status);
+            var resultUser = await _userService.UpdateUserStatusAsync(userId, dto.Status);
 
             return Ok(existingUser.ToReadDto());
             

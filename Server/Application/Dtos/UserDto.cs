@@ -1,4 +1,5 @@
 ﻿using CastMe.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
 namespace CastMe.User.CrossCutting.DTOs
@@ -7,7 +8,7 @@ namespace CastMe.User.CrossCutting.DTOs
     {
         public class Create
         {
-            [Required]
+            [Required, MaxLength(50)]
             public string UserName { get; set; } = default!;
 
             [Required, MaxLength(100)]
@@ -16,10 +17,8 @@ namespace CastMe.User.CrossCutting.DTOs
             [Required, MaxLength(100)]
             public string LastName { get; set; } = default!;
 
-            [Required]
-            [Phone]
+            [Required, Phone]
             public string Phone { get; set; } = default!;
-
 
             [Required]
             public DateTime DateOfBirth { get; set; }
@@ -54,7 +53,14 @@ namespace CastMe.User.CrossCutting.DTOs
             [Required, MinLength(6)]
             public string Password { get; set; } = default!;
 
-            public string Role { get; set; } = "Model";
+            // rola pobierana z DB
+            [Required]
+            public string RoleName { get; set; }
+
+            [Required(ErrorMessage = "Musisz przesłać co najmniej jedno zdjęcie.")]
+            public IFormFile[] Photos { get; set; } = default!;
+            [Required]
+            public bool AcceptTerms { get; set; }
         }
 
         public class Read

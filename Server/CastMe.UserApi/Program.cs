@@ -40,7 +40,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Wpisz: Bearer {token}"
     };
     c.AddSecurityDefinition("Bearer", scheme);
-//c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
 c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -127,7 +126,6 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 var app = builder.Build();
 
 
-
 app.UseStaticFiles();
 
 // Swagger (tu włączam zawsze; jeśli chcesz tylko w DEV, owiń w if)
@@ -135,6 +133,36 @@ app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CastMe WebApi v1"));
 
 app.UseHttpsRedirection();
+
+//Automatyczne logowanie admina w DEV (do testów bez tokena)
+if (app.Environment.IsDevelopment())
+{
+    app.Use(async (context, next) =>
+    {
+        if (!context.User.Identity.IsAuthenticated)
+        {
+            var db = context.RequestServices.GetRequiredService<UserDbContext>();
+            var adminUser = await db.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserName == "admin");
+
+            if (adminUser != null)
+            {
+                var claims = new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, adminUser.Id.ToString()),
+                    new Claim(ClaimTypes.Name, adminUser.UserName),
+                    new Claim(ClaimTypes.Role, adminUser.Role?.Name ?? "Admin")
+                };
+
+                context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Development"));
+            }
+        }
+
+        await next.Invoke();
+    });
+}
+
 
 app.UseAuthentication();   // WAŻNE: przed UseAuthorization
 app.UseAuthorization();
