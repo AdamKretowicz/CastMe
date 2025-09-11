@@ -123,7 +123,7 @@ const ProfilePage = () => {
                           {selectedUser.firstName} {selectedUser.lastName}
                         </h1>
                         <div className="flex items-center space-x-4 text-gray-600 mb-4">
-                          <span className="px-3 py-1 bg-[#EA1A62] bg-opacity-10 text-[#EA1A62] text-sm rounded-full font-medium">
+                          <span className="px-3 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-sm rounded-full font-medium">
                             {selectedUser.role}
                           </span>
                           {selectedUser.age && (

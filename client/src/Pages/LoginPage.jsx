@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Input from "../components/UI/Input";
@@ -7,14 +7,20 @@ import Card from "../components/UI/Card";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
-    email: "anna.kowalska@email.com",
-    password: "password123",
+    email: "as@ass.com",
+    password: "dupadupa",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login } = useAuth();
+  const { login, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (currentUser) {
+      navigate("/dashboard");
+    }
+  }, [currentUser, navigate]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -67,9 +73,7 @@ const LoginPage = () => {
     try {
       const result = login(formData.email, formData.password);
 
-      if (result.success) {
-        navigate("/dashboard");
-      } else {
+      if (!result.success) {
         setErrors({ form: result.error });
       }
     } catch (error) {

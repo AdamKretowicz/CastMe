@@ -1,0 +1,54 @@
+{
+  "users": [
+    {
+      "id": "ef10",
+      "userName": "bobb",
+      "firstName": "yung",
+      "lastName": "bob",
+      "email": "as@ass.com",
+      "phone": "222000333",
+      "password": "dupadupa",
+      "confirmPassword": "dupadupa",
+      "country": "Polska",
+      "city": "Rzeszów",
+      "gender": "0",
+      "dateOfBirth": "2006-01-11",
+      "height": "222",
+      "weight": "111",
+      "hairColor": "czarny",
+      "clothingSize": "22, 33, 44, 22, 22",
+      "description": "model ouuh yeah",
+      "role": "Model",
+      "photos": [
+        "https://randomuser.me/api/portraits/women/44.jpg"
+      ],
+      "acceptTerms": true,
+      "createdAt": "2025-09-10T17:19:10.357Z"
+    },
+    {
+      "id": "3f47",
+      "userName": "Daj Kamienia",
+      "firstName": "Anna",
+      "lastName": "Kowalska",
+      "email": "aniakowal@gmail.com",
+      "phone": "456232090",
+      "password": "siemaeniu",
+      "confirmPassword": "siemaeniu",
+      "country": "Uzbekistan",
+      "city": "al-shabab",
+      "gender": "1",
+      "dateOfBirth": "2003-01-16",
+      "height": "164",
+      "weight": "77",
+      "hairColor": "brązowe",
+      "clothingSize": "32, 21, 33, 44, 36",
+      "description": "modelka fashion week siema eniu daj kamienia",
+      "role": "Fotograf",
+      "photos": [
+        "https://randomuser.me/api/portraits/women/44.jpg"
+      ],
+      "acceptTerms": true,
+      "createdAt": "2025-09-11T09:21:47.188Z"
+    }
+  ]
+}

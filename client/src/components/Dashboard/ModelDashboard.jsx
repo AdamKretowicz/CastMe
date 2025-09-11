@@ -15,8 +15,7 @@ import Button from "../UI/Button";
 
 const ModelDashboard = () => {
   const { currentUser } = useAuth();
-  const { castings, applications, applyToCasting, getUserApplications } =
-    useCasting();
+  const { castings, applyToCasting, getUserApplications } = useCasting();
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
 
@@ -209,9 +208,9 @@ const ModelDashboard = () => {
                           {casting.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#EA1A62] text-xs rounded-full"
+                              className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
                             >
-                              #{tag}
+                              {tag}
                             </span>
                           ))}
                         </div>
