@@ -152,6 +152,32 @@ namespace Infrastructure.Migrations
                     b.ToTable("Castings", "Casting");
                 });
 
+            modelBuilder.Entity("Domain.Entities.CastingAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CastingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CastingId");
+
+                    b.HasIndex("RoleId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("CastingAssignments", "Casting");
+                });
+
             modelBuilder.Entity("Domain.Entities.CastingRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -262,10 +288,37 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.UserRole", "Role")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("Domain.Entities.CastingAssignment", b =>
+                {
+                    b.HasOne("Domain.Entities.Casting", "Casting")
+                        .WithMany("Assignments")
+                        .HasForeignKey("CastingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.UserRole", "Role")
+                        .WithMany("Assignments")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("CastMe.Domain.Entities.User", "User")
+                        .WithMany("Assignments")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Casting");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entities.CastingRole", b =>
@@ -303,11 +356,15 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("CastMe.Domain.Entities.User", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("Photos");
                 });
 
             modelBuilder.Entity("Domain.Entities.Casting", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("Roles");
 
                     b.Navigation("Tags");
@@ -315,6 +372,8 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.UserRole", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("Users");
                 });
 #pragma warning restore 612, 618

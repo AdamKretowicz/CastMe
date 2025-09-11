@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using CastMe.Domain.Entities;
 using CastMe.User.CrossCutting.DTOs;
+using Domain.Entities;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,11 +12,15 @@ namespace CastMe.UserApi.Services
     {
         private readonly UserDbContext _context;
         private readonly IEmailSender _emailSender;
+        private readonly IUserRepository _userRepo;
+        private readonly IRoleRepository _roleRepo;
 
-        public UserService(UserDbContext context, IEmailSender emailSender)
+        public UserService(UserDbContext context, IEmailSender emailSender, IUserRepository userRepo, IRoleRepository roleRepo)
         {
             _context = context;
             _emailSender = emailSender;
+            _userRepo = userRepo;
+            _roleRepo = roleRepo;
         }
 
         public async Task<IEnumerable<Domain.Entities.User>> GetAllUsers() =>
@@ -83,8 +88,13 @@ namespace CastMe.UserApi.Services
 
         }
 
+        public async Task<IEnumerable<UserRole>> GetAllRoles() =>
+            await _roleRepo.GetAllAsync();
 
+        public async Task<UserRole?> GetRoleById(Guid id) =>
+            await _roleRepo.GetByIdAsync(id);
 
-
+        public async Task<UserRole?> GetRoleByName(string name) =>
+            await _roleRepo.GetByNameAsync(name);
     }
 }

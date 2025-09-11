@@ -4,6 +4,7 @@ using CastMe.Api.Features.Photos;
 using CastMe.UserApi.Services;
 using Infrastructure.Auth;
 using Infrastructure.Context;
+using Infrastructure.Repositories;
 using Infrastructure.Security;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
@@ -11,8 +12,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using WebApi.Infrastructure.Email;
+using System.Security.Claims;
 using System.Text;
+using WebApi.Extensions;
+using WebApi.Infrastructure.Email;
 using WebApi.Services;
 using WebApi.Services.Photo;
 
@@ -37,7 +40,21 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Wpisz: Bearer {token}"
     };
     c.AddSecurityDefinition("Bearer", scheme);
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
+//c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
+c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        } 
+    });
     c.CustomSchemaIds(type => type.FullName.Replace("+", "."));
 });
 
@@ -86,7 +103,9 @@ builder.Services
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30)
+            ClockSkew = TimeSpan.FromSeconds(30),
+
+            NameClaimType = ClaimTypes.NameIdentifier
         };
     });
 
@@ -101,7 +120,13 @@ builder.Services.Configure<LocalStorageOptions>(builder.Configuration.GetSection
 builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+
+
 var app = builder.Build();
+
+
 
 app.UseStaticFiles();
 
@@ -113,6 +138,9 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();   // WAŻNE: przed UseAuthorization
 app.UseAuthorization();
+
+// Middleware do autoryzacji ról (własny)
+app.UseMiddleware<RoleAuthorizationMiddleware>();
 
 app.MapControllers();
 

@@ -1,6 +1,7 @@
 ﻿using Application.Dtos;
 using Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using WebApi.Extensions;
 
 namespace WebApi.Controllers
 {
@@ -20,6 +21,7 @@ namespace WebApi.Controllers
 
         [HttpPost("send")]
         [ProducesResponseType(200)]
+        [RoleAuthorize("Admin")]
         public async Task<IActionResult> Send([FromBody] EmailForm dto)
         {
             await _emailSender.SendEmailAsync(dto);

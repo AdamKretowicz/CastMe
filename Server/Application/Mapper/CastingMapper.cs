@@ -34,7 +34,7 @@ namespace Application.Mapper
                 Capacity = r.Capacity,
                 AcceptedCount = r.AcceptedCount
             }).ToList(),
-            Tags = casting.Tags.Select(t => t.Value).ToList()
+            Tags = casting.Tags.Select(t => t.Value).ToList(),
         };
 
 
@@ -98,7 +98,12 @@ namespace Application.Mapper
                 });
             }
         }
-
+        //ENTITY -> READ DTO (PARTICIPANT VIEW)
+        public static CastingDto.ReadParticipants ToParticipantReadDto(this Casting casting) => new CastingDto.ReadParticipants
+        {
+            CastingId = casting.Id,
+            Participants = casting.Assignments.ToDictionary(a => a.UserId.ToString(), a => a.Role.Name)
+        };
 
 
     }

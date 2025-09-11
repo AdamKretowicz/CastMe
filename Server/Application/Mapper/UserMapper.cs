@@ -21,11 +21,12 @@ namespace CastMe.UserApi.Mappers
             Description = user.Description,
             Gender = user.Gender,
             HairColor = user.HairColor,
-            ClothingSize = user.ClothingSize
+            ClothingSize = user.ClothingSize,
+            Role = user.Role.Name,
         };
 
         // CREATE DTO -> ENTITY 
-        public static Domain.Entities.User ToEntity(this UserDto.Create dto, string passwordHash)
+        public static Domain.Entities.User ToEntity(this UserDto.Create dto, string passwordHash, Guid roleId)
         {
             return new Domain.Entities.User
             {
@@ -44,7 +45,9 @@ namespace CastMe.UserApi.Mappers
                 Gender = dto.Gender,
                 HairColor = dto.HairColor,
                 ClothingSize = dto.ClothingSize,
-                PasswordHash = passwordHash
+                PasswordHash = passwordHash,
+                RoleId = roleId
+                
             };
         }
 

@@ -1,12 +1,13 @@
 ﻿// CastMe.Api/Controllers/PhotosController.cs
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Application.Dtos.Photo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using WebApi.Extensions;
 using WebApi.Services.Photo;
 
 namespace CastMe.Api.Controllers
@@ -23,6 +24,7 @@ namespace CastMe.Api.Controllers
         [HttpGet]
         [AllowAnonymous]
         [ProducesResponseType(typeof(IReadOnlyList<PhotoDto>), StatusCodes.Status200OK)]
+        [RoleAuthorize("Admin", "Model", "Photographer","Designer", "Guest")]
         public async Task<IActionResult> GetUserPhotos([FromRoute] Guid userId, CancellationToken ct)
         {
             var items = await _service.GetUserPhotosAsync(userId, ct);
@@ -36,7 +38,8 @@ namespace CastMe.Api.Controllers
         [RequestSizeLimit(50_000_000)]
         [ProducesResponseType(typeof(PhotoDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> Upload(
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
+        public async Task<IActionResult> Uploaad(
             [FromRoute] Guid userId,
             [FromForm] UploadPhotoForm form,   // <- DTO z IFormFile
             CancellationToken ct)
@@ -54,8 +57,17 @@ namespace CastMe.Api.Controllers
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
         public async Task<IActionResult> Delete([FromRoute] Guid userId, [FromRoute] Guid photoId, CancellationToken ct)
         {
+            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
+            if (currentUserId is null)
+                return Forbid();
+
+            if (!User.IsInRole("Admin") && currentUserId != userId.ToString())
+                return Forbid();
+
+
             await _service.DeleteAsync(userId, photoId, ct);
             return NoContent();
         }
@@ -65,6 +77,7 @@ namespace CastMe.Api.Controllers
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
         public async Task<IActionResult> SetMain([FromRoute] Guid userId, [FromRoute] Guid photoId, CancellationToken ct)
         {
             await _service.SetMainAsync(userId, photoId, ct);
@@ -76,6 +89,7 @@ namespace CastMe.Api.Controllers
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
         public async Task<IActionResult> Reorder(
             [FromRoute] Guid userId,
             [FromBody] ReorderPhotosRequest body,

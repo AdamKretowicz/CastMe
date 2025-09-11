@@ -53,6 +53,8 @@ namespace CastMe.User.CrossCutting.DTOs
 
             [Required, MinLength(6)]
             public string Password { get; set; } = default!;
+
+            public string Role { get; set; } = "Model";
         }
 
         public class Read
@@ -76,6 +78,8 @@ namespace CastMe.User.CrossCutting.DTOs
             public string ClothingSize { get; set; } = default!;
 
             public string? Description { get; set; }
+
+            public string Role { get; set; } = default!;
         }
 
         public class Update

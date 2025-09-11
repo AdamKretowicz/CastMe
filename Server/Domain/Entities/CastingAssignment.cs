@@ -5,30 +5,27 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
-    [Table("CastingRoles", Schema = "Casting")]
-    public class CastingRole
+    [Table("CastingAssignments", Schema = "Casting")]
+    public class CastingAssignment
     {
         [Key]
         public Guid Id { get; set; }
 
         [Required]
         public Guid CastingId { get; set; }
-
-        [ForeignKey(nameof(CastingId))]
         public Casting Casting { get; set; } = default!;
 
         [Required]
-        public CastingRoleType Role { get; set; }
+        public Guid RoleId { get; set; }
+        public UserRole Role { get; set; } = default!;
 
         [Required]
-        public int Capacity { get; set; }
-
-        public int AcceptedCount { get; set; } = 0;
-
+        public Guid UserId { get; set; }
+        public User User { get; set; } = default!;
     }
+
 }

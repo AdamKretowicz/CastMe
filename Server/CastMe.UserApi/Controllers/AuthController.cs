@@ -2,6 +2,7 @@
 using Application.Auth;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
+using CastMe.UserApi.Services;
 using Infrastructure.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,15 +19,14 @@ namespace WebApi.Controllers
         private readonly UserDbContext _db;
         private readonly IPasswordHasher _passwordHasher;
         private readonly IJwtTokenService _tokenService;
+        private readonly UserService _userService;
 
-        public AuthController(
-            UserDbContext db,
-            IPasswordHasher passwordHasher,
-            IJwtTokenService tokenService)
+        public AuthController(UserDbContext db, IPasswordHasher passwordHasher, IJwtTokenService tokenService, UserService userService)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
+            _userService = userService;
         }
 
         [HttpPost("register")]
@@ -48,7 +48,10 @@ namespace WebApi.Controllers
 
             // Hash hasła i utworzenie encji
             var passwordHash = _passwordHasher.Hash(dto.Password);
-            var entity = dto.ToEntity(passwordHash);
+
+            var userRole = _userService.GetRoleByName(dto.Role);
+
+            var entity = dto.ToEntity(passwordHash,userRole.Result.Id);
 
             _db.Users.Add(entity);
             await _db.SaveChangesAsync();
