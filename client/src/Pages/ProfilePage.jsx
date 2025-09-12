@@ -1,24 +1,55 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Camera, MapPin, Calendar, User, Star, Heart } from "lucide-react";
-import { users, favorites } from "../data/users";
+import { Camera, MapPin, Calendar, User, Heart } from "lucide-react";
 import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
+import { apiFetch } from "../utils/api";
 
 const ProfilePage = () => {
   const { currentUser } = useAuth();
-  const [selectedUser, setSelectedUser] = useState(currentUser);
-  const [userFavorites, setUserFavorites] = useState(favorites);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userFavorites, setUserFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Get all users except the current user for browsing
+  // Kiedy user się zmienia → ustaw aktualny profil
+  useEffect(() => {
+    if (currentUser) {
+      setSelectedUser(currentUser);
+    }
+  }, [currentUser]);
+
+  // Pobierz użytkowników z backendu
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const data = await apiFetch("/api/User/GetActive");
+        setUsers(data);
+      } catch (error) {
+        console.error("Błąd pobierania użytkowników:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  if (!currentUser || !selectedUser) {
+    return <div>Ładowanie profilu...</div>;
+  }
+
+  if (loading) {
+    return <div>Ładowanie użytkowników...</div>;
+  }
+
   const otherUsers = users.filter((user) => user.id !== currentUser.id);
-
   const isOrganizer = currentUser.role === "Organizator";
-  const isFavorite = (userId) => {
-    return userFavorites.some(
+
+  const isFavorite = (userId) =>
+    userFavorites.some(
       (fav) => fav.organizerId === currentUser.id && fav.userId === userId
     );
-  };
 
   const toggleFavorite = (userId) => {
     if (isFavorite(userId)) {
@@ -44,7 +75,7 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar - User List (for organizers) */}
+          {/* Sidebar - lista użytkowników (tylko dla organizatora) */}
           {isOrganizer && (
             <div className="lg:col-span-1">
               <Card>
@@ -55,6 +86,7 @@ const ProfilePage = () => {
                 </Card.Header>
                 <Card.Content>
                   <div className="space-y-3">
+                    {/* Mój profil */}
                     <div
                       className={`p-3 rounded-lg cursor-pointer transition-colors ${
                         selectedUser.id === currentUser.id
@@ -68,6 +100,8 @@ const ProfilePage = () => {
                         {currentUser.role}
                       </p>
                     </div>
+
+                    {/* Inni użytkownicy */}
                     {otherUsers.map((user) => (
                       <div
                         key={user.id}
@@ -93,12 +127,12 @@ const ProfilePage = () => {
             </div>
           )}
 
-          {/* Main Profile */}
+          {/* Główna sekcja profilu */}
           <div className={isOrganizer ? "lg:col-span-3" : "lg:col-span-4"}>
             <Card>
               <Card.Content className="p-8">
                 <div className="flex flex-col md:flex-row gap-8">
-                  {/* Profile Photo */}
+                  {/* Zdjęcie */}
                   <div className="flex-shrink-0">
                     <div className="w-40 h-40 bg-gray-200 rounded-xl overflow-hidden">
                       {selectedUser.photos && selectedUser.photos[0] ? (
@@ -115,7 +149,7 @@ const ProfilePage = () => {
                     </div>
                   </div>
 
-                  {/* Profile Info */}
+                  {/* Info */}
                   <div className="flex-grow">
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -123,7 +157,7 @@ const ProfilePage = () => {
                           {selectedUser.firstName} {selectedUser.lastName}
                         </h1>
                         <div className="flex items-center space-x-4 text-gray-600 mb-4">
-                          <span className="px-3 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-sm rounded-full font-medium">
+                          <span className="px-3 py-1 bg-[#EA1A62] bg-opacity-10 text-[#EA1A62] text-sm rounded-full font-medium">
                             {selectedUser.role}
                           </span>
                           {selectedUser.age && (
@@ -141,7 +175,7 @@ const ProfilePage = () => {
                         </div>
                       </div>
 
-                      {/* Favorite Button (only for organizers viewing other users) */}
+                      {/* Ulubione (tylko organizator + inni użytkownicy) */}
                       {isOrganizer && selectedUser.id !== currentUser.id && (
                         <Button
                           variant={
@@ -162,7 +196,7 @@ const ProfilePage = () => {
                       )}
                     </div>
 
-                    {/* Additional Details */}
+                    {/* Szczegóły */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900 mb-2">
@@ -206,7 +240,7 @@ const ProfilePage = () => {
                   </div>
                 </div>
 
-                {/* Photo Gallery */}
+                {/* Portfolio */}
                 {selectedUser.photos && selectedUser.photos.length > 1 && (
                   <div className="mt-8">
                     <h3 className="text-lg font-semibold text-[#2B2628] mb-4">
@@ -229,7 +263,7 @@ const ProfilePage = () => {
                   </div>
                 )}
 
-                {/* Edit Profile Button (only for own profile) */}
+                {/* Edycja profilu (tylko własny) */}
                 {selectedUser.id === currentUser.id && (
                   <div className="mt-8 pt-6 border-t border-gray-200">
                     <Button variant="outline">

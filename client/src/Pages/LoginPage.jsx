@@ -7,13 +7,13 @@ import Card from "../components/UI/Card";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
-    email: "as@ass.com",
-    password: "dupadupa",
+    email: "alex.johnson@email.com",
+    password: "password123",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, currentUser } = useAuth();
+  const { currentUser, login } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,7 +25,6 @@ const LoginPage = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Email validation
     if (!formData.email) {
       newErrors.email = "Email jest wymagany";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -34,7 +33,6 @@ const LoginPage = () => {
       newErrors.email = "Email nie może być dłuższy niż 100 znaków";
     }
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = "Hasło jest wymagane";
     } else if (formData.password.length < 8) {
@@ -54,7 +52,6 @@ const LoginPage = () => {
       [name]: value,
     }));
 
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -71,14 +68,16 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const result = login(formData.email, formData.password);
+      const result = await login(formData.email, formData.password);
 
       if (!result.success) {
-        setErrors({ form: result.error });
+        setErrors({ form: result.error || "Błąd logowania" });
+      } else {
+        navigate("/profile");
       }
     } catch (error) {
       setErrors({ form: "Wystąpił błąd podczas logowania" });
-      console.log(error);
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
