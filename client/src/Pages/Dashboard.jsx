@@ -19,7 +19,7 @@ const Dashboard = () => {
   }
 
   // Show organizer dashboard for organizers, model dashboard for everyone else
-  if (currentUser.role === "Organizator") {
+  if (currentUser.role === "Admin") {
     return <OrganizerDashboard />;
   }
 

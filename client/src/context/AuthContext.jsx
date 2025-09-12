@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState } from "react";
+import { apiFetch } from "../utils/api";
 
 const AuthContext = createContext();
 
-function useAuth() {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
@@ -10,97 +11,76 @@ function useAuth() {
   return context;
 }
 
-const AuthProvider = ({ children }) => {
+export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [usersList, setUsersList] = useState([]);
-
-  // 🔥 Pobranie użytkowników z db.json przy starcie
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await fetch("http://localhost:3001/users");
-        const data = await res.json();
-        setUsersList(data);
-      } catch (err) {
-        console.error("Błąd pobierania użytkowników:", err);
-      }
-    };
-    fetchUsers();
-  }, []);
+  const [accessToken, setAccessToken] = useState(localStorage.getItem("accessToken"));
+  const [refreshToken, setRefreshToken] = useState(localStorage.getItem("refreshToken"));
 
   // 🔑 Logowanie
-  const login = async (email, password) => {
+  const login = async (userName, password) => {
     try {
-      const res = await fetch(
-        `http://localhost:3001/users?email=${email}&password=${password}`
-      );
-      const data = await res.json();
+      const res = await apiFetch("/api/Auth/login", {
+        method: "POST",
+        body: JSON.stringify({ userName, password }),
+      });
 
-      if (data.length > 0) {
-        setCurrentUser(data[0]);
-        return { success: true, user: data[0] };
-      }
-      return { success: false, error: "Nieprawidłowy email lub hasło" };
+      setAccessToken(res.accessToken);
+      setRefreshToken(res.refreshToken);
+      setCurrentUser(res.user);
+
+      localStorage.setItem("accessToken", res.accessToken);
+      localStorage.setItem("refreshToken", res.refreshToken);
+
+      return { success: true, user: res.user };
     } catch (err) {
-      console.error(err);
-      return { success: false, error: "Błąd połączenia z serwerem" };
+      console.error("Login error:", err);
+      return { success: false, error: "Nieprawidłowe dane logowania" };
     }
   };
 
-  // 🔑 Rejestracja
+  // 🔑 Rejestracja (multipart/form-data)
   const register = async (userData) => {
     try {
-      // sprawdzanie czy email istnieje
-      const emailCheck = await fetch(
-        `http://localhost:3001/users?email=${userData.email}`
-      );
-      const existingUsers = await emailCheck.json();
-      if (existingUsers.length > 0) {
-        return {
-          success: false,
-          error: "Ten adres email jest już zarejestrowany",
-        };
-      }
-
-      const res = await fetch("http://localhost:3001/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...userData,
-          createdAt: new Date().toISOString(),
-        }),
+      const formData = new FormData();
+      Object.keys(userData).forEach((key) => {
+        if (Array.isArray(userData[key])) {
+          userData[key].forEach((item) => formData.append(key, item));
+        } else {
+          formData.append(key, userData[key]);
+        }
       });
 
-      if (!res.ok) throw new Error("Błąd rejestracji użytkownika");
+      const res = await apiFetch("/api/Auth/register", {
+        method: "POST",
+        body: formData,
+      });
 
-      const newUser = await res.json();
-      setUsersList((prev) => [...prev, newUser]);
-      setCurrentUser(newUser);
+      setCurrentUser(res);
 
-      return { success: true, user: newUser };
+      return { success: true, user: res };
     } catch (err) {
-      console.error(err);
-      return {
-        success: false,
-        error: "Nie udało się zarejestrować użytkownika",
-      };
+      console.error("Register error:", err);
+      return { success: false, error: "Nie udało się zarejestrować" };
     }
   };
 
   // 🔑 Wylogowanie
   const logout = () => {
     setCurrentUser(null);
+    setAccessToken(null);
+    setRefreshToken(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
   };
 
   const value = {
     currentUser,
+    accessToken,
+    refreshToken,
     login,
     register,
     logout,
-    usersList,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-export { useAuth, AuthProvider };
