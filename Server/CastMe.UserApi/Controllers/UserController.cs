@@ -170,7 +170,7 @@ namespace CastMe.UserApi.Controllers
                 UserName = user.UserName,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Phone = user.Phone,                 
+                Phone = user.Phone,
                 DateOfBirth = user.DateOfBirth,
                 Height = user.Height,
                 Weight = user.Weight,
@@ -222,7 +222,7 @@ namespace CastMe.UserApi.Controllers
             var resultUser = await _userService.UpdateUserStatusAsync(userId, dto.Status);
 
             return Ok(existingUser.ToReadDto());
-            
+
         }
 
 
@@ -236,5 +236,55 @@ namespace CastMe.UserApi.Controllers
 
             return Ok(rolesDto);
         }
+
+        /// <summary>
+        /// Zwraca liczby aktywnych użytkowników pogrupowane po roli (bez roli "Admin").
+        /// Przykład:
+        /// [ { "role": "Model", "count": 8 }, { "role": "Photographer", "count": 5 }, ... ]
+        /// </summary>
+        [HttpGet("/GetActiveUsersInRoles")]
+        [RoleAuthorize("Admin")]
+        public async Task<ActionResult> GetActiveUsersInRoles()
+        {
+            var active = await _userService.GetAllUsers(UserStatus.Active);
+
+            var result = active
+                .Where(u => u.Role != null && !string.Equals(u.Role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(u => u.Role!.Name)
+                .Select(g => new
+                {
+                    Role = g.Key,
+                    Count = g.Count()
+                })
+                .OrderBy(x => x.Role)
+                .ToList();
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Zwraca aktywnych użytkowników o podanej roli (tylko Admin ma dostęp).
+        /// Przykład: GET /GetActiveByRole/Model
+        /// </summary>
+        [HttpGet("/GetActiveByRole/{roleName}")]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [RoleAuthorize("Admin")]
+        public async Task<ActionResult<IEnumerable<UserDto.Read>>> GetActiveUsersByRoleName(string roleName)
+        {
+            if (string.IsNullOrWhiteSpace(roleName))
+                return BadRequest(new { message = "Role name is required." });
+
+            var users = await _userService.GetAllUsers(UserStatus.Active);
+
+            var filtered = users
+                .Where(u => u.Role != null &&
+                            string.Equals(u.Role.Name, roleName, StringComparison.OrdinalIgnoreCase))
+                .Select(u => u.ToReadDto())
+                .ToList();
+
+            return Ok(filtered);
+        }
+
+
     }
 }
