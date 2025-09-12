@@ -30,7 +30,7 @@ namespace WebApi.Controllers
 
 
 
-        //<summary>Get all castings.</summary>
+        ///<summary>Get all castings.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
@@ -40,7 +40,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
-        //<summary>Get casting by Id.</summary>
+        ///<summary>Get casting by Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetById)]
         [ProducesResponseType(typeof(CastingDto.Read), 200)]
         [ProducesResponseType(404)]
@@ -52,7 +52,7 @@ namespace WebApi.Controllers
             return Ok(casting.ToReadDto());
         }
 
-        //<summary>Get castings by organiser Id.</summary>
+        ///<summary>Get castings by organiser Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetByOrganiserId)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
@@ -63,7 +63,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
-        //<summary>Create new casting.</summary>
+        ///<summary>Create new casting.</summary>
         [HttpPost(Endpoints.CastingEndpoints.Create)]
         [ProducesResponseType(typeof(CastingDto.Read), 201)]
         [ProducesResponseType(400)]
@@ -77,7 +77,7 @@ namespace WebApi.Controllers
             return CreatedAtAction(nameof(GetById), new { id = casting.Id }, casting.ToReadDto());
         }
 
-        //<summary>Update existing casting.</summary>
+        ///<summary>Update existing casting.</summary>
         [HttpPut(Endpoints.CastingEndpoints.Update)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
@@ -106,7 +106,7 @@ namespace WebApi.Controllers
             await _castingService.Delete(id);
             return NoContent();
         }
-        //<summary>Get participants by casting Id.</summary>
+        ///<summary>Get participants by casting Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetParticipantsByCastingId)]
         [ProducesResponseType(typeof(CastingDto.ReadParticipants), 200)]
         [ProducesResponseType(404)]
@@ -126,7 +126,7 @@ namespace WebApi.Controllers
 
         }
 
-        //<summary> Add participant to casting by casting Id. </summary>
+        ///<summary> Add participant to casting by casting Id. </summary>
         [HttpPost(Endpoints.CastingEndpoints.AddParticipant)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
@@ -161,7 +161,7 @@ namespace WebApi.Controllers
             }
         }
 
-        //<summary> Remove participant from casting by casting Id. </summary>
+        ///<summary> Remove participant from casting by casting Id. </summary>
         [HttpDelete(Endpoints.CastingEndpoints.RemoveParticipant)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
@@ -195,6 +195,36 @@ namespace WebApi.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
+
+        ///<summary> Get Castings By Participant Id</summary>
+        [HttpGet(Endpoints.CastingEndpoints.GetCastingsByParticipantId)]
+        [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetCastingsByParticipantId([FromRoute] Guid userId)
+        {
+            var loggedUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (loggedUserIdString == null) return Unauthorized();
+
+            var loggedUserId = Guid.Parse(loggedUserIdString);
+
+            var roles = await _userService.GetAllRoles();
+            var adminRole = roles.FirstOrDefault(r => r.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
+            var adminRoleId = adminRole?.Id;
+
+            var user = _userService.GetById(loggedUserId);
+
+            var isAdmin = user.Result?.RoleId == adminRoleId;
+
+            if (!isAdmin && loggedUserId != userId)
+                return Forbid();
+
+            var castings = await _castingService.GetAllCastingsByUserId(userId);
+            return Ok(castings.Select(c => c.ToReadDto()));
+        }
+
+
+
 
 
     }

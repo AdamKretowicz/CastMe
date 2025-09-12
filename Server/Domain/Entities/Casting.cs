@@ -50,7 +50,6 @@ namespace Domain.Entities
 
         public ICollection<CastingRole> Roles { get; set; } = new List<CastingRole>();
         public ICollection<CastingTag> Tags { get; set; } = new List<CastingTag>();
-        // Relacja do przypisanych użytkowników w rolach
         public ICollection<CastingAssignment> Assignments { get; set; } = new List<CastingAssignment>();
 
     }

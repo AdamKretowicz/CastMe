@@ -71,6 +71,17 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 // Opcje JWT (POCO w Infrastructure/Auth)
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 
+// Added Front Cross acces
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5174") // port Vite
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Opcje SMTP
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SMTP"));
 
@@ -162,7 +173,7 @@ if (app.Environment.IsDevelopment())
         await next.Invoke();
     });
 }
-
+app.UseCors();
 
 app.UseAuthentication();   // WAŻNE: przed UseAuthorization
 app.UseAuthorization();

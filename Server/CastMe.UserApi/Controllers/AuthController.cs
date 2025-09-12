@@ -131,7 +131,7 @@ namespace WebApi.Controllers
 
             var user = await _db.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.UserName == dto.UserName);
+                .FirstOrDefaultAsync(u => u.UserName == dto.UserName||u.Email == dto.UserName);
 
             if (user is null || !_passwordHasher.Verify(dto.Password, user.PasswordHash))
                 return Unauthorized(new { message = "Invalid username or password" });

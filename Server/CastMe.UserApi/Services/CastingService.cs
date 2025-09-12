@@ -90,7 +90,10 @@ namespace WebApi.Services
             await _context.SaveChangesAsync();
         }
 
-
+        public async Task<IEnumerable<Domain.Entities.Casting>> GetAllCastingsByUserId(Guid userId) =>
+            await _context.Castings
+            .Where(c => c.Assignments.Any(a => a.UserId == userId))
+            .ToListAsync();
 
     }
 }
