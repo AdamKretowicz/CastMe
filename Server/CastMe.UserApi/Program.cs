@@ -78,7 +78,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5174") // port Vite
+        policy.WithOrigins("http://localhost:5173") // port Vite
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
