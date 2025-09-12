@@ -24,15 +24,20 @@ namespace CastMe.UserApi.Controllers
         private readonly ILogger<UserController> _logger;
         private readonly IEmailSender _emailSender;
         private readonly IPhotoService _photoService;
+        private readonly IUserFilterRepository _userFilter;
 
-        public UserController(UserService userService, IPasswordHasher passwordHasher, ILogger<UserController> logger, IEmailSender emailSender, IPhotoService photoService)
+        public UserController(UserService userService, IPasswordHasher passwordHasher, ILogger<UserController> logger,
+            IEmailSender emailSender, IPhotoService photoService, IUserFilterRepository userFilter)
         {
             _userService = userService;
             _passwordHasher = passwordHasher;
             _logger = logger;
             _emailSender = emailSender;
             _photoService = photoService;
+            _userFilter = userFilter;
         }
+
+
 
         /// <summary>Get all users.</summary>
         [HttpGet("/GetAll")]
@@ -280,6 +285,15 @@ namespace CastMe.UserApi.Controllers
             var rolesDto = roles.Select(r => new { r.Name });
 
             return Ok(rolesDto);
+        }
+
+        [HttpGet("/FilterUsers")]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        public async Task<IActionResult> FilterUsers([FromQuery] ModelFilterDto filter)
+        {
+            var users = await _userFilter.GetFilteredAsync(filter);
+            return Ok(users.Select(u => u.ToReadDto()));
         }
 
         /// <summary>
