@@ -49,50 +49,50 @@ namespace Application.Auth
                 .Must(BeValidAge).WithMessage("Użytkownik musi mieć co najmniej 16 lat")
                 .Must(BeRealisticAge).WithMessage("Data urodzenia nie może być wcześniejsza niż 100 lat temu");
 
-            RuleFor(x => x.Height)
-                .GreaterThanOrEqualTo(80).WithMessage("Wzrost musi być co najmniej 80 cm")
-                .LessThanOrEqualTo(300).WithMessage("Wzrost nie może być większy niż 300 cm");
+            When(x => x.RoleName.Equals("Model", StringComparison.OrdinalIgnoreCase), () =>
+            {
+                RuleFor(x => x.Height)
+                    .NotEmpty().WithMessage("Wzrost jest wymagany")
+                    .GreaterThanOrEqualTo(80).WithMessage("Wzrost musi być co najmniej 80 cm")
+                    .LessThanOrEqualTo(300).WithMessage("Wzrost nie może być większy niż 300 cm");
 
-            RuleFor(x => x.Weight)
-                .GreaterThanOrEqualTo(20).WithMessage("Waga musi być co najmniej 20 kg")
-                .LessThanOrEqualTo(300).WithMessage("Waga nie może być większa niż 300 kg");
+                RuleFor(x => x.Weight)
+                    .NotEmpty().WithMessage("Waga jest wymagana")
+                    .GreaterThanOrEqualTo(20).WithMessage("Waga musi być co najmniej 20 kg")
+                    .LessThanOrEqualTo(300).WithMessage("Waga nie może być większa niż 300 kg");
 
-            RuleFor(x => x.Country)
-                .NotEmpty().WithMessage("Kraj jest wymagany")
-                .MaximumLength(100).WithMessage("Nazwa kraju nie może być dłuższa niż 100 znaków");
+                RuleFor(x => x.HairColor)
+                    .NotEmpty().WithMessage("Kolor włosów jest wymagany")
+                    .MaximumLength(50).WithMessage("Kolor włosów nie może być dłuższy niż 50 znaków");
 
-            RuleFor(x => x.City)
-                .NotEmpty().WithMessage("Miasto jest wymagane")
-                .MaximumLength(100).WithMessage("Nazwa miasta nie może być dłuższa niż 100 znaków");
+                RuleFor(x => x.ClothingSize)
+                    .NotEmpty().WithMessage("Rozmiar odzieży jest wymagany")
+                    .MaximumLength(10).WithMessage("Rozmiar odzieży nie może być dłuższy niż 10 znaków")
+                    .Matches(@"^(XS|S|M|L|XL|XXL|XXXL|\d{2,3})$").WithMessage("Nieprawidłowy rozmiar odzieży");
 
-            RuleFor(x => x.Description)
-                .MaximumLength(1000).WithMessage("Opis nie może być dłuższy niż 1000 znaków");
+                RuleFor(x => x.Photos)
+                    .NotEmpty().WithMessage("Musisz przesłać co najmniej jedno zdjęcie")
+                    .Must(x => x != null && x.Length >= 1).WithMessage("Musisz przesłać co najmniej jedno zdjęcie");
+            });
 
-            RuleFor(x => x.Gender)
-                .IsInEnum().WithMessage("Nieprawidłowa wartość płci");
+            When(x => x.RoleName.Equals("Designer", StringComparison.OrdinalIgnoreCase)
+                  || x.RoleName.Equals("Photographer", StringComparison.OrdinalIgnoreCase), () =>
+                  {
+                      RuleFor(x => x.Photos)
+                      .NotEmpty().WithMessage("Musisz przesłać co najmniej jedno zdjęcie")
+                      .Must(x => x != null && x.Length >= 1).WithMessage("Musisz przesłać co najmniej jedno zdjęcie");
+                  });
 
-            RuleFor(x => x.HairColor)
-                .NotEmpty().WithMessage("Kolor włosów jest wymagany")
-                .MaximumLength(50).WithMessage("Kolor włosów nie może być dłuższy niż 50 znaków");
 
-            RuleFor(x => x.ClothingSize)
-                .NotEmpty().WithMessage("Rozmiar odzieży jest wymagany")
-                .MaximumLength(10).WithMessage("Rozmiar odzieży nie może być dłuższy niż 10 znaków")
-                .Matches(@"^(XS|S|M|L|XL|XXL|XXXL|\d{2,3})$").WithMessage("Nieprawidłowy rozmiar odzieży");
-
-            RuleFor(x => x.RoleName)
-                .NotEmpty().WithMessage("Rola jest wymagana");
-
-            RuleFor(x => x.Photos)
-                .NotEmpty().WithMessage("Musisz przesłać co najmniej jedno zdjęcie")
-                .Must(x => x.Count() >= 1).WithMessage("Musisz przesłać co najmniej jedno zdjęcie");
 
             RuleForEach(x => x.Photos)
                 .SetValidator(new PhotoUploadDtoValidator());
 
-            //Opcjonalnie jeśli w DTO jest akceptacja regulaminu
-             RuleFor(x => x.AcceptTerms)
-                 .Equal(true).WithMessage("Musisz zaakceptować regulamin");
+            RuleFor(x => x.RoleName)
+                .NotEmpty().WithMessage("Rola jest wymagana");
+
+            RuleFor(x => x.AcceptTerms)
+                .Equal(true).WithMessage("Musisz zaakceptować regulamin");
         }
 
         private static bool BeValidAge(DateTime dateOfBirth)
@@ -107,6 +107,7 @@ namespace Application.Auth
             return dateOfBirth >= DateTime.UtcNow.AddYears(-100);
         }
     }
+
 
     public class PhotoUploadDtoValidator : AbstractValidator<IFormFile>
     {

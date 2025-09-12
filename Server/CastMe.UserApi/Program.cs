@@ -9,11 +9,13 @@ using Infrastructure.Security;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using WebApi.Extensions;
 using WebApi.Infrastructure.Email;
 using WebApi.Services;
@@ -132,6 +134,20 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+
+
+
+// Rate limiting per IP for Email Form
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("ContactFormLimiter", opt =>
+    {
+        opt.PermitLimit = 5;                  
+        opt.Window = TimeSpan.FromMinutes(6); 
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+});
 
 
 var app = builder.Build();

@@ -1,4 +1,6 @@
 ﻿using Application.Auth;
+using Application.Dtos;
+using Application.Interfaces;
 using CastMe.Domain.Entities;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
@@ -7,6 +9,7 @@ using Domain.Entities;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Extensions;
+using WebApi.Services.Photo;
 
 namespace CastMe.UserApi.Controllers
 {
@@ -19,15 +22,16 @@ namespace CastMe.UserApi.Controllers
         private readonly UserService _userService;
         private readonly IPasswordHasher _passwordHasher;
         private readonly ILogger<UserController> _logger;
+        private readonly IEmailSender _emailSender;
+        private readonly IPhotoService _photoService;
 
-        public UserController(
-            UserService userService,
-            IPasswordHasher passwordHasher,
-            ILogger<UserController> logger)
+        public UserController(UserService userService, IPasswordHasher passwordHasher, ILogger<UserController> logger, IEmailSender emailSender, IPhotoService photoService)
         {
             _userService = userService;
             _passwordHasher = passwordHasher;
             _logger = logger;
+            _emailSender = emailSender;
+            _photoService = photoService;
         }
 
         /// <summary>Get all users.</summary>
@@ -119,6 +123,11 @@ namespace CastMe.UserApi.Controllers
 
             var role = _userService.GetRoleByName(dto.RoleName);
 
+            if (dto == null)
+                throw new ArgumentNullException(nameof(dto));
+
+            if (role?.Result == null)
+                return BadRequest(new { message = "Wybrana rola nie istnieje." });
 
             var entity = dto.ToEntity(passwordHash, role.Result.Id);
             await _userService.Add(entity);
@@ -220,6 +229,42 @@ namespace CastMe.UserApi.Controllers
             if (existingUser is null) return NotFound();
 
             var resultUser = await _userService.UpdateUserStatusAsync(userId, dto.Status);
+            try
+            {
+                var newStatus = dto.Status;
+                var emailMessage = newStatus switch
+                {
+                    UserStatus.Active => "Twoje konto zostało aktywowane.",
+                    UserStatus.Rejected => "Twoje konto nie zostało zaakceptowane. Dziękujemy za zainteresowanie",
+                    _ => "Status Twojego konta został zaktualizowany."
+                };
+
+
+                var email = new EmailDto.Send
+                {
+                    To = existingUser.Email,
+                    Subject = "Aktualizacja Statusu",
+                    Message = emailMessage,
+                };
+
+                if (newStatus == UserStatus.Rejected)
+                {
+                    var photos = await _photoService.GetUserPhotosAsync(existingUser.Id);
+                    foreach (var photo in photos)
+                    {
+                        await _photoService.DeleteAsync(existingUser.Id, photo.Id);
+                    }
+
+                }
+
+
+                await _emailSender.SendEmailAsync(email);
+            }
+            catch(Exception ex)
+            {
+                throw new Exception($"User status updated, but failed to send email: {ex.Message}");
+            }
+            
 
             return Ok(existingUser.ToReadDto());
             

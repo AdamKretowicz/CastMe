@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Application.Auth;
+using Application.Dtos;
+using Application.Interfaces;
 using CastMe.Api.Features.Photos;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
@@ -23,15 +25,17 @@ namespace WebApi.Controllers
         private readonly IJwtTokenService _tokenService;
         private readonly UserService _userService;
         private readonly IPhotoService _photoService;
+        private readonly IEmailSender _emailSender;
 
-        public AuthController(UserDbContext db, IPasswordHasher passwordHasher,
-            IJwtTokenService tokenService, UserService userService, IPhotoService photoService)
+        public AuthController(UserDbContext db, IPasswordHasher passwordHasher, IJwtTokenService tokenService,
+                UserService userService, IPhotoService photoService, IEmailSender emailSender)
         {
             _db = db;
             _passwordHasher = passwordHasher;
             _tokenService = tokenService;
             _userService = userService;
             _photoService = photoService;
+            _emailSender = emailSender;
         }
 
         [HttpPost("register")]
@@ -102,6 +106,15 @@ namespace WebApi.Controllers
             new(ClaimTypes.Email, entity.Email)
         };
             var (accessToken, expiresAtUtc, refreshToken) = _tokenService.CreateTokens(claims);
+
+            await _emailSender.SendEmailAsync(new EmailDto.Send
+            {
+                DisplayName = $"{entity.FirstName} {entity.LastName}",
+                To = entity.Email,
+                Subject = "Witamy w CastMe!",
+                Message = $"Cześć {entity.FirstName},<br/><br/>Dziękujemy za rejestrację w CastMe! Cieszymy się, że dołączyłeś do naszej społeczności." +
+                $"<br/>Rozpoczeliśmy już proces weryfikacji twojego konta.<br/><br/>Pozdrawiamy,<br/>Zespół CastMe"
+            });
 
             return Created($"/user/{entity.Id}", new
             {

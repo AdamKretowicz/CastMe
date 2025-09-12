@@ -8,58 +8,39 @@ namespace CastMe.User.CrossCutting.DTOs
     {
         public class Create
         {
-            [Required, MaxLength(50)]
             public string UserName { get; set; } = default!;
 
-            [Required, MaxLength(100)]
             public string FirstName { get; set; } = default!;
 
-            [Required, MaxLength(100)]
             public string LastName { get; set; } = default!;
 
-            [Required, Phone]
             public string Phone { get; set; } = default!;
 
-            [Required]
             public DateTime DateOfBirth { get; set; }
 
-            [Required, EmailAddress]
             public string Email { get; set; } = default!;
 
-            [Required, MaxLength(50)]
             public string Country { get; set; } = default!;
 
-            [Required, MaxLength(50)]
             public string City { get; set; } = default!;
 
-            [Required]
             public Gender Gender { get; set; }
 
-            [Required]
-            public int Height { get; set; }
+            public int? Height { get; set; }
 
-            [Required]
-            public int Weight { get; set; }
+            public int? Weight { get; set; }
 
-            [Required, MaxLength(50)]
-            public string HairColor { get; set; } = default!;
+            public string? HairColor { get; set; }
 
-            [Required, MaxLength(50)]
-            public string ClothingSize { get; set; } = default!;
+            public string? ClothingSize { get; set; }
 
-            [MinLength(8), MaxLength(250)]
             public string? Description { get; set; }
 
-            [Required, MinLength(6)]
             public string Password { get; set; } = default!;
 
-            // rola pobierana z DB
-            [Required]
-            public string RoleName { get; set; }
+            public string RoleName { get; set; } = default!;
 
-            [Required(ErrorMessage = "Musisz przesłać co najmniej jedno zdjęcie.")]
-            public IFormFile[] Photos { get; set; } = default!;
-            [Required]
+            public IFormFile[]? Photos { get; set; } = default!;
             public bool AcceptTerms { get; set; }
         }
 
@@ -70,7 +51,7 @@ namespace CastMe.User.CrossCutting.DTOs
             public string FirstName { get; set; } = default!;
             public string LastName { get; set; } = default!;
 
-            public string Phone { get; set; }
+            public string Phone { get; set; } = "000000000";
             public DateTime DateOfBirth { get; set; }
 
             public string Email { get; set; } = default!;
@@ -78,10 +59,10 @@ namespace CastMe.User.CrossCutting.DTOs
             public string City { get; set; } = default!;
             public Gender Gender { get; set; }
 
-            public int Height { get; set; }
-            public int Weight { get; set; }
-            public string HairColor { get; set; } = default!;
-            public string ClothingSize { get; set; } = default!;
+            public int? Height { get; set; }
+            public int? Weight { get; set; }
+            public string? HairColor { get; set; } = default!;
+            public string? ClothingSize { get; set; } = default!;
 
             public string? Description { get; set; }
 
@@ -119,17 +100,15 @@ namespace CastMe.User.CrossCutting.DTOs
             [Required]
             public Gender Gender { get; set; }
 
-            [Required]
-            public int Height { get; set; }
+            public int? Height { get; set; }
 
-            [Required]
-            public int Weight { get; set; }
+            public int? Weight { get; set; }
 
-            [Required, MaxLength(50)]
-            public string HairColor { get; set; } = default!;
+            [MaxLength(50)]
+            public string? HairColor { get; set; } = default!;
 
-            [Required, MaxLength(50)]
-            public string ClothingSize { get; set; } = default!;
+            [MaxLength(50)]
+            public string? ClothingSize { get; set; } = default!;
 
             [MinLength(8), MaxLength(250)]
             public string? Description { get; set; }

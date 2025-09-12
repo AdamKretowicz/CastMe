@@ -27,8 +27,8 @@ namespace CastMe.Domain.Entities
         public string Phone { get; set; } = default!;
 
         public DateTime DateOfBirth { get; set; }
-        public int Height { get; set; }
-        public int Weight { get; set; }
+        public int? Height { get; set; }
+        public int? Weight { get; set; }
         [EmailAddress]
         public string Email { get; set; } = default!;
         public string Country { get; set; } = default!;
@@ -37,12 +37,12 @@ namespace CastMe.Domain.Entities
 
         public Gender Gender { get; set; }
 
-        public string HairColor { get; set; } = default!;
-        public string ClothingSize { get; set; } = default!;
+        public string? HairColor { get; set; } = default!;
+        public string? ClothingSize { get; set; } = default!;
 
 
 
-        public ICollection<Photo> Photos { get; set; } = new List<Photo>();
+        public ICollection<Photo>? Photos { get; set; } = new List<Photo>();
 
 
         public Guid RoleId { get; set; }
