@@ -48,7 +48,7 @@ namespace CastMe.UserApi.Mappers
                 ClothingSize = dto.ClothingSize,
                 PasswordHash = passwordHash,
                 RoleId = roleId,
-                AcceptedTerms = dto.AcceptTerms,
+                //AcceptedTerms = dto.AcceptTerms,
                 Status = Domain.Entities.UserStatus.Pending
             };
         }
