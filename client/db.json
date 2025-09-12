@@ -49,6 +49,118 @@
       ],
       "acceptTerms": true,
       "createdAt": "2025-09-11T09:21:47.188Z"
+    },
+    {
+      "id": "9818",
+      "userName": "Siema eniu",
+      "firstName": "ad",
+      "lastName": "ss",
+      "email": "jack@example.com",
+      "phone": "230233922",
+      "password": "asdasd",
+      "confirmPassword": "asdasd",
+      "country": "Niemcy",
+      "city": "Berlin",
+      "gender": "0",
+      "dateOfBirth": "1999-02-11",
+      "height": "122",
+      "weight": "43",
+      "hairColor": "blond",
+      "clothingSize": "21, 31, 43, 23, 21",
+      "description": "",
+      "role": "Model",
+      "photos": [
+        "https://randomuser.me/api/portraits/man/44.jpg"
+      ],
+      "acceptTerms": true,
+      "createdAt": "2025-09-11T11:44:07.485Z"
+    },
+    {
+      "id": "9dd8",
+      "userName": "Organizator",
+      "firstName": "adam",
+      "lastName": "skrrrtowicz",
+      "email": "skrrt@gmail.com",
+      "phone": "555333222",
+      "password": "kamien123",
+      "confirmPassword": "kamien123",
+      "country": "Polska",
+      "city": "Rzeszów",
+      "gender": "0",
+      "dateOfBirth": "1999-02-22",
+      "height": "180",
+      "weight": "100",
+      "hairColor": "czarne",
+      "clothingSize": "21, 31, 43, 23, 43",
+      "description": "",
+      "role": "Admin",
+      "photos": [
+        "https://randomuser.me/api/portraits/men/44.jpg"
+      ],
+      "acceptTerms": true,
+      "createdAt": "2025-09-11T11:44:07.485Z"
+    },
+    {
+      "id": "4bcc",
+      "userName": "bob",
+      "firstName": "asd",
+      "lastName": "asd",
+      "email": "as@asd.com",
+      "phone": "222333222",
+      "password": "dupadupa",
+      "confirmPassword": "dupadupa",
+      "country": "Uzbekistan",
+      "city": "al-shabab",
+      "gender": "2",
+      "dateOfBirth": "2022-02-11",
+      "height": "222",
+      "weight": "111",
+      "hairColor": "czarny",
+      "clothingSize": "32, 21, 33, 44, 36",
+      "description": "model ouuh yeah",
+      "role": "Fotograf",
+      "photos": [
+        "https://randomuser.me/api/portraits/women/43.jpg"
+      ],
+      "acceptTerms": true,
+      "createdAt": "2025-09-12T09:46:06.691Z"
     }
-  ]
+  ],
+  "castings": [
+    {
+      "id": "2053",
+      "title": "castinh",
+      "description": "test",
+      "location": "rzeszow",
+      "salary": "300",
+      "roles": [
+        {
+          "role": "Model",
+          "places": 20
+        },
+        {
+          "role": "Fotograf",
+          "places": 3
+        },
+        {
+          "role": "Projektant",
+          "places": 5
+        },
+        {
+          "role": "Wolontariusz",
+          "places": 3
+        }
+      ],
+      "tags": [
+        "fashion",
+        "killa",
+        "bombardilla"
+      ],
+      "deadline": "2025-10-03",
+      "organizerId": "9dd8",
+      "createdAt": "2025-09-12T08:59:16.172Z",
+      "status": "active"
+    }
+  ],
+  "applications": []
 }

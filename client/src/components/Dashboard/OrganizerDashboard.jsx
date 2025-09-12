@@ -1,11 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useCasting } from "../../context/CastingContext";
 import {
   Plus,
-  Edit,
   Users,
-  Calendar,
   MapPin,
   CheckCircle,
   XCircle,
@@ -19,30 +17,43 @@ const OrganizerDashboard = () => {
   const { currentUser } = useAuth();
   const {
     castings,
-    applications,
     createCasting,
     updateApplicationStatus,
     getCastingApplications,
   } = useCasting();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showSalaryField, setShowSalaryField] = useState(false);
   const [selectedCasting, setSelectedCasting] = useState(null);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     location: "",
     salary: "",
-    tags: "",
-    roles: ["Model"],
-    maxPlaces: "",
+    roles: [{ role: "Model", places: 1 }], // domyślnie Model
+    tags: [""],
     deadline: "",
   });
   const [errors, setErrors] = useState({});
+
+  const availableRoles = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
 
   const organizerCastings = castings.filter(
     (casting) => casting.organizerId === currentUser.id
   );
 
-  const availableRoles = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
+  const selectedRoles = useMemo(
+    () => formData.roles.map((r) => r.role),
+    [formData.roles]
+  );
+
+  const remainingRoles = useMemo(
+    () => availableRoles.filter((r) => !selectedRoles.includes(r)),
+    [availableRoles, selectedRoles]
+  );
+
+  const canAddRole = remainingRoles.length > 0;
 
   const validateForm = () => {
     const newErrors = {};
@@ -59,15 +70,22 @@ const OrganizerDashboard = () => {
     else if (formData.location.length > 100)
       newErrors.location = "Lokalizacja nie może być dłuższa niż 100 znaków";
 
-    if (formData.salary && formData.salary.length > 50)
+    if (showSalaryField && formData.salary && formData.salary.length > 50)
       newErrors.salary = "Wynagrodzenie nie może być dłuższe niż 50 znaków";
 
-    if (!formData.maxPlaces)
-      newErrors.maxPlaces = "Liczba miejsc jest wymagana";
-    else if (isNaN(formData.maxPlaces) || formData.maxPlaces <= 0)
-      newErrors.maxPlaces = "Liczba miejsc musi być większa od 0";
+    if (
+      !formData.roles.length ||
+      formData.roles.some((r) => !r.places || r.places <= 0)
+    )
+      newErrors.roles = "Każda rola musi mieć co najmniej 1 miejsce";
 
     if (!formData.deadline) newErrors.deadline = "Termin jest wymagany";
+
+    // unikaj duplikatów ról (dodatkowa asekuracja)
+    const dup = formData.roles.map((r) => r.role);
+    if (new Set(dup).size !== dup.length) {
+      newErrors.roles = "Każda rola może wystąpić tylko raz";
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -75,51 +93,64 @@ const OrganizerDashboard = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
+  // ===== R O L E =====
+  const handleRoleUpdate = (index, field, value) => {
+    const updated = [...formData.roles];
+    updated[index][field] =
+      field === "places" ? parseInt(value || 0, 10) : value;
+    setFormData((prev) => ({ ...prev, roles: updated }));
+    if (errors.roles) setErrors((prev) => ({ ...prev, roles: "" }));
+  };
+
+  const addRoleField = () => {
+    if (!canAddRole) return;
+    const nextRole = remainingRoles[0] || "Model";
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      roles: [...prev.roles, { role: nextRole, places: 1 }],
     }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
   };
 
-  const handleRoleChange = (role, checked) => {
-    if (checked) {
-      setFormData((prev) => ({
-        ...prev,
-        roles: [...prev.roles, role],
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        roles: prev.roles.filter((r) => r !== role),
-      }));
-    }
+  const removeRoleField = (index) => {
+    const updated = formData.roles.filter((_, i) => i !== index);
+    setFormData((prev) => ({ ...prev, roles: updated }));
+    if (errors.roles) setErrors((prev) => ({ ...prev, roles: "" }));
   };
 
-  const handleSubmit = (e) => {
+  // ===== T A G I =====
+  const handleTagChange = (index, value) => {
+    const updated = [...formData.tags];
+    updated[index] = value;
+    setFormData((prev) => ({ ...prev, tags: updated }));
+  };
+
+  const addTagField = () => {
+    setFormData((prev) => ({ ...prev, tags: [...prev.tags, ""] }));
+  };
+
+  const removeTagField = (index) => {
+    const updated = formData.tags.filter((_, i) => i !== index);
+    setFormData((prev) => ({ ...prev, tags: updated }));
+  };
+
+  // ===== S U B M I T =====
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     const castingData = {
       ...formData,
+      // jeśli salary ukryte, nie wysyłaj wartości
+      ...(showSalaryField ? {} : { salary: "" }),
       organizerId: currentUser.id,
-      maxPlaces: parseInt(formData.maxPlaces),
-      tags: formData.tags
-        ? formData.tags
-            .split(",")
-            .map((tag) => tag.trim())
-            .slice(0, 5)
-        : [],
+      createdAt: new Date().toISOString(),
     };
 
-    const result = createCasting(castingData);
+    const result = await createCasting(castingData);
 
     if (result.success) {
       setFormData({
@@ -127,11 +158,11 @@ const OrganizerDashboard = () => {
         description: "",
         location: "",
         salary: "",
-        tags: "",
-        roles: ["Model"],
-        maxPlaces: "",
+        roles: [{ role: "Model", places: 1 }],
+        tags: [""],
         deadline: "",
       });
+      setShowSalaryField(false);
       setShowCreateForm(false);
       alert("Casting został utworzony pomyślnie!");
     }
@@ -172,9 +203,7 @@ const OrganizerDashboard = () => {
     }
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("pl-PL");
-  };
+  const formatDate = (date) => new Date(date).toLocaleDateString("pl-PL");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -182,19 +211,23 @@ const OrganizerDashboard = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-[#2B2628] mb-2">
-              Dashboard Organizatora
+              Witaj {currentUser.firstName}!
             </h1>
             <p className="text-gray-600">
               Zarządzaj swoimi castingami i zgłoszeniami
             </p>
           </div>
-          <Button onClick={() => setShowCreateForm(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nowy casting
-          </Button>
+
+          {/* 🔥 Ukryj przycisk, gdy formularz otwarty */}
+          {!showCreateForm && (
+            <Button onClick={() => setShowCreateForm(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nowy casting
+            </Button>
+          )}
         </div>
 
-        {/* Create Casting Form */}
+        {/* FORMULARZ DODAWANIA CASTINGU */}
         {showCreateForm && (
           <Card className="mb-8">
             <Card.Header>
@@ -203,126 +236,265 @@ const OrganizerDashboard = () => {
               </h2>
             </Card.Header>
             <Card.Content>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <Input
-                  label="Tytuł"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  error={errors.title}
-                  required
-                  placeholder="Sesja zdjęciowa dla marki odzieżowej"
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Opis <span className="text-red-500">*</span>
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
-                      errors.description ? "border-red-300" : "border-gray-300"
-                    }`}
-                    rows="4"
-                    placeholder="Opisz szczegóły castingu..."
-                  />
-                  {errors.description && (
-                    <p className="text-sm text-red-600 mt-1">
-                      {errors.description}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Lokalizacja"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    error={errors.location}
-                    required
-                    placeholder="Warszawa"
-                  />
-
-                  <Input
-                    label="Wynagrodzenie"
-                    name="salary"
-                    value={formData.salary}
-                    onChange={handleChange}
-                    error={errors.salary}
-                    placeholder="500-800 PLN"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Maksymalna liczba miejsc"
-                    name="maxPlaces"
-                    type="number"
-                    value={formData.maxPlaces}
-                    onChange={handleChange}
-                    error={errors.maxPlaces}
-                    required
-                    placeholder="4"
-                  />
-
-                  <Input
-                    label="Termin zgłoszeń"
-                    name="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={handleChange}
-                    error={errors.deadline}
-                    required
-                  />
-                </div>
-
-                <Input
-                  label="Tagi (oddzielone przecinkami, max 5)"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleChange}
-                  placeholder="fashion, studio, outdoor"
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Poszukiwane role
-                  </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {availableRoles.map((role) => (
-                      <label key={role} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.roles.includes(role)}
-                          onChange={(e) =>
-                            handleRoleChange(role, e.target.checked)
-                          }
-                          className="rounded border-gray-300 text-[#EA1A62] focus:ring-[#EA1A62]"
-                        />
-                        <span className="text-sm text-gray-700">{role}</span>
-                      </label>
-                    ))}
+              {/* zwężenie formularza + siatka */}
+              <div className="max-w-3xl mx-auto">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Tytuł + Termin */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Tytuł"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      error={errors.title}
+                      required
+                      placeholder="Sesja zdjęciowa dla marki odzieżowej"
+                    />
+                    <Input
+                      label="Termin zgłoszeń"
+                      name="deadline"
+                      type="date"
+                      value={formData.deadline}
+                      onChange={handleChange}
+                      error={errors.deadline}
+                      required
+                    />
                   </div>
-                </div>
 
-                <div className="flex space-x-3">
-                  <Button type="submit">Utwórz casting</Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowCreateForm(false)}
-                  >
-                    Anuluj
-                  </Button>
-                </div>
-              </form>
+                  {/* Opis (pełna szerokość) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Opis <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
+                        errors.description
+                          ? "border-red-300"
+                          : "border-gray-300"
+                      }`}
+                      rows="4"
+                      placeholder="Opisz szczegóły castingu..."
+                    />
+                    {errors.description && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Lokalizacja + (opcjonalnie) Wynagrodzenie */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Lokalizacja"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      error={errors.location}
+                      required
+                      placeholder="Warszawa"
+                    />
+
+                    {!showSalaryField ? (
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowSalaryField(true)}
+                          className="text-[#EA1A62] text-sm font-medium hover:underline"
+                          aria-label="Dodaj wynagrodzenie"
+                        >
+                          <span className="inline-flex items-center">
+                            <Plus className="w-4 h-4 mr-1" />
+                            Wynagrodzenie (opcjonalnie)
+                          </span>
+                        </button>
+                      </div>
+                    ) : (
+                      <Input
+                        label="Wynagrodzenie"
+                        name="salary"
+                        value={formData.salary}
+                        onChange={handleChange}
+                        error={errors.salary}
+                        placeholder="np. 500-800 PLN"
+                      />
+                    )}
+                  </div>
+
+                  {showSalaryField && (
+                    <div className="-mt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSalaryField(false);
+                          setFormData((p) => ({ ...p, salary: "" }));
+                          if (errors.salary)
+                            setErrors((prev) => ({ ...prev, salary: "" }));
+                        }}
+                        className="text-sm text-gray-500 hover:underline"
+                      >
+                        Usuń wynagrodzenie
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Role z limitami (unikalne) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Role i liczba miejsc
+                    </label>
+                    <div className="space-y-3">
+                      {formData.roles.map((rf, index) => {
+                        // opcje: wszystkie dostępne role z wyłączeniem już zaznaczonych,
+                        // ale zawsze dozwolona rola bieżącego wiersza (żeby nie znikała z selecta)
+                        const options = availableRoles.filter(
+                          (r) => r === rf.role || !selectedRoles.includes(r)
+                        );
+
+                        return (
+                          <div
+                            key={index}
+                            className="grid grid-cols-12 gap-3 items-center"
+                          >
+                            <div className="col-span-7 md:col-span-8">
+                              <select
+                                value={rf.role}
+                                onChange={(e) =>
+                                  handleRoleUpdate(
+                                    index,
+                                    "role",
+                                    e.target.value
+                                  )
+                                }
+                                className="block w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EA1A62]"
+                              >
+                                {options.map((r) => (
+                                  <option key={r} value={r}>
+                                    {r}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="col-span-3 md:col-span-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={rf.places}
+                                onChange={(e) =>
+                                  handleRoleUpdate(
+                                    index,
+                                    "places",
+                                    e.target.value
+                                  )
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EA1A62]"
+                                placeholder="1"
+                              />
+                            </div>
+                            <div className="col-span-2 md:col-span-2">
+                              {formData.roles.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeRoleField(index)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  Usuń
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={addRoleField}
+                          disabled={!canAddRole}
+                          className={`text-sm font-medium ${
+                            canAddRole
+                              ? "text-[#EA1A62] hover:underline"
+                              : "text-gray-400 cursor-not-allowed"
+                          }`}
+                          title={
+                            canAddRole
+                              ? "Dodaj rolę"
+                              : "Dodano już wszystkie dostępne role"
+                          }
+                        >
+                          + Dodaj rolę
+                        </button>
+                      </div>
+                    </div>
+                    {errors.roles && (
+                      <p className="text-sm text-red-600 mt-1">
+                        {errors.roles}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Tagi (siatka) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Tagi
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {formData.tags.map((tag, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <input
+                            type="text"
+                            value={tag}
+                            onChange={(e) =>
+                              handleTagChange(index, e.target.value)
+                            }
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EA1A62]"
+                            placeholder="np. fashion"
+                          />
+                          {formData.tags.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeTagField(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              Usuń
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={addTagField}
+                        className="text-[#EA1A62] text-sm font-medium hover:underline"
+                      >
+                        + Dodaj tag
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Przyciski */}
+                  <div className="flex gap-3">
+                    <Button type="submit">Utwórz casting</Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowCreateForm(false);
+                        setShowSalaryField(false);
+                      }}
+                    >
+                      Anuluj
+                    </Button>
+                  </div>
+                </form>
+              </div>
             </Card.Content>
           </Card>
         )}
 
-        {/* My Castings */}
+        {/* MOJE CASTINGI */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <Card>
@@ -351,14 +523,19 @@ const OrganizerDashboard = () => {
                         <h3 className="font-medium text-gray-900 mb-2">
                           {casting.title}
                         </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+                        <div className="flex items-center flex-wrap gap-4 text-sm text-gray-600 mb-2">
                           <div className="flex items-center">
                             <MapPin className="w-4 h-4 mr-1" />
                             {casting.location}
                           </div>
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-1" />
-                            {casting.maxPlaces}
+                            {Array.isArray(casting.roles)
+                              ? casting.roles.reduce(
+                                  (sum, r) => sum + (r.places || 0),
+                                  0
+                                )
+                              : 0}
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
@@ -377,7 +554,7 @@ const OrganizerDashboard = () => {
             </Card>
           </div>
 
-          {/* Applications for Selected Casting */}
+          {/* ZGŁOSZENIA DO WYBRANEGO CASTINGU */}
           <div>
             <Card>
               <Card.Header>

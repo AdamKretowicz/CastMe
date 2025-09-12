@@ -1,14 +1,27 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Camera, User, Home, Info, Mail, MoreHorizontal } from "lucide-react";
+import {
+  Camera,
+  User,
+  Home,
+  Info,
+  Mail,
+  MoreHorizontal,
+  LayoutDashboard,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const Header = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
+
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1024
+  );
+
+  const userMenuRef = useRef(null);
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -16,12 +29,24 @@ const Header = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // zamykanie dropdownu po kliknięciu poza
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
   const handleLogout = () => {
+    setUserMenuOpen(false);
     logout();
     navigate("/");
   };
 
-  const navLinks = [
+  const guestLinks = [
     { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
     { to: "/about", label: "O nas", icon: <Info className="w-4 h-4" /> },
     { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
@@ -31,6 +56,17 @@ const Header = () => {
       icon: <Camera className="w-5 h-5" />,
     },
   ];
+
+  const userLinks = [
+    { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
+    {
+      to: "/dashboard",
+      label: "Panel",
+      icon: <LayoutDashboard className="w-4 h-4" />,
+    },
+  ];
+
+  const navLinks = currentUser ? userLinks : guestLinks;
 
   const isMobile = windowWidth < 768; // sm
   const isLarge = windowWidth >= 1024; // lg
@@ -48,9 +84,10 @@ const Header = () => {
             />
           </Link>
 
-          {/* Środek - More menu na mobile/medium, wszystkie linki na large */}
+          {/* Nawigacja (środek) */}
           <div className="flex-1 flex justify-center">
-            {isLarge ? (
+            {/* u zalogowanego zawsze widoczne linki (bez „Więcej”) */}
+            {isLarge || currentUser ? (
               <nav className="flex space-x-4">
                 {navLinks.map((link) => (
                   <NavLink
@@ -72,21 +109,24 @@ const Header = () => {
             ) : (
               <div className="relative">
                 <button
-                  onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                  className="flex items-center gap-x-1 px-3 h-10 rounded-md text-gray-600 hover:text-[#EA1A62] cursor-pointer
-"
+                  onClick={() => setMoreMenuOpen((o) => !o)}
+                  className="flex items-center gap-x-1 px-3 h-10 rounded-md text-gray-600 hover:text-[#EA1A62]"
                 >
                   <MoreHorizontal className="w-4 h-4" />
                   <span>Więcej</span>
                 </button>
                 {moreMenuOpen && (
-                  <div className="absolute mt-1 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[120px]">
+                  <div className="absolute mt-1 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[160px]">
                     {navLinks.map((link) => (
                       <NavLink
                         key={link.to}
                         to={link.to}
                         onClick={() => setMoreMenuOpen(false)}
-                        className="px-4 py-2 hover:bg-gray-100 flex items-center gap-x-2"
+                        className={({ isActive }) =>
+                          `px-4 py-2 flex items-center gap-x-2 hover:bg-gray-100 ${
+                            isActive ? "text-[#EA1A62]" : "text-gray-700"
+                          }`
+                        }
                       >
                         {link.icon}
                         <span>{link.label}</span>
@@ -98,11 +138,10 @@ const Header = () => {
             )}
           </div>
 
-          {/* Prawo - Auth / User */}
+          {/* Prawa strona */}
           <div className="flex items-center space-x-4 flex-shrink-0">
             {!currentUser ? (
               <>
-                {/* Zawsze pokaż Logowanie/Rejestracja na medium i large */}
                 {!isMobile && (
                   <>
                     <Link
@@ -119,18 +158,16 @@ const Header = () => {
                     </Link>
                   </>
                 )}
-
-                {/* Mobile - ikona usera z dropdown */}
                 {isMobile && (
                   <div className="relative">
                     <button
-                      onClick={() => setUserMenuOpen(!userMenuOpen)}
+                      onClick={() => setUserMenuOpen((o) => !o)}
                       className="text-gray-600 hover:text-[#EA1A62]"
                     >
                       <User className="w-6 h-6" />
                     </button>
                     {userMenuOpen && (
-                      <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[120px]">
+                      <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[140px]">
                         <Link
                           to="/login"
                           className="px-4 py-2 hover:bg-gray-100"
@@ -151,22 +188,54 @@ const Header = () => {
                 )}
               </>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/profile"
-                  className="flex items-center space-x-2 text-gray-600 hover:text-[#EA1A62]"
+              // Dropdown zalogowanego: hover + click, bez "dziury" (mt-0)
+              <div
+                className="relative"
+                ref={userMenuRef}
+                onMouseEnter={() => setUserMenuOpen(true)}
+                onMouseLeave={() => setUserMenuOpen(false)}
+              >
+                <button
+                  onClick={() => setUserMenuOpen((o) => !o)}
+                  className="flex items-center space-x-2 text-gray-600 hover:text-[#EA1A62] focus:outline-none"
                 >
-                  <User className="w-4 h-4" />
+                  {currentUser?.photos?.length > 0 ? (
+                    <img
+                      src={currentUser.photos[0]}
+                      alt={currentUser.firstName}
+                      className="w-8 h-8 rounded-full object-cover border border-gray-300"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center border border-gray-300">
+                      <User className="w-4 h-4 text-gray-500" />
+                    </div>
+                  )}
                   <span className="hidden sm:inline">
                     {currentUser.firstName}
                   </span>
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center space-x-2 text-gray-600 hover:text-[#EA1A62]"
-                >
-                  Wyloguj
                 </button>
+
+                <div
+                  className={`absolute right-0 top-full mt-0 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[180px] transition transform origin-top-right ${
+                    userMenuOpen
+                      ? "opacity-100 scale-100 pointer-events-auto"
+                      : "opacity-0 scale-95 pointer-events-none"
+                  }`}
+                >
+                  <Link
+                    to="/profile"
+                    className="px-4 py-2 hover:bg-gray-100"
+                    onClick={() => setUserMenuOpen(false)}
+                  >
+                    Profil
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 text-left hover:bg-gray-100"
+                  >
+                    Wyloguj
+                  </button>
+                </div>
               </div>
             )}
           </div>

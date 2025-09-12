@@ -7,8 +7,8 @@ import Card from "../components/UI/Card";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
-    email: "as@ass.com",
-    password: "dupadupa",
+    email: "skrrt@gmail.com",
+    password: "kamien123",
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
