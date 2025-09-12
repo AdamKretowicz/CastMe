@@ -25,7 +25,7 @@ namespace WebApi.Controllers
         public async Task<IActionResult> Send([FromBody] EmailForm dto)
         {
             await _emailSender.SendEmailAsync(dto);
-            return Ok(new { Message = "Email sent (simulated)" });
+            return Ok(new { Message = "Email sent" });
         }
 
 

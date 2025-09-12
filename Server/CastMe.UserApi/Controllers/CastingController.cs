@@ -131,23 +131,10 @@ namespace WebApi.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
         public async Task<IActionResult> AddParticipant(Guid castingId, Guid userId)
         {
-            var loggedUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (loggedUserIdString == null) return Unauthorized();
 
-            var loggedUserId = Guid.Parse(loggedUserIdString);
-
-            var roles = await _userService.GetAllRoles();
-            var adminRole = roles.FirstOrDefault(r => r.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-            var adminRoleId = adminRole?.Id;
-
-            var user = _userService.GetById(loggedUserId);
-
-            var isAdmin = user.Result?.RoleId == adminRoleId;
-
-            if (!isAdmin && loggedUserId != userId)
-                return Forbid("You cannot add another user to the casting.");
 
             try
             {
@@ -166,24 +153,9 @@ namespace WebApi.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
         public async Task<IActionResult> RemoveParticipant(Guid castingId, Guid userId)
         {
-            var loggedUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (loggedUserIdString == null) return Unauthorized();
-
-            var loggedUserId = Guid.Parse(loggedUserIdString);
-
-            var roles = await _userService.GetAllRoles();
-            var adminRole = roles.FirstOrDefault(r => r.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-            var adminRoleId = adminRole?.Id;
-
-            var user = _userService.GetById(loggedUserId);
-
-            var isAdmin = user.Result?.RoleId == adminRoleId;
-
-            if (!isAdmin && loggedUserId != userId)
-                return Forbid("You cannot add another user to the casting.");
-
             try
             {
                 await _castingService.RemoveParticipant(castingId, userId);
@@ -201,24 +173,9 @@ namespace WebApi.Controllers
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
         public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetCastingsByParticipantId([FromRoute] Guid userId)
         {
-            var loggedUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (loggedUserIdString == null) return Unauthorized();
-
-            var loggedUserId = Guid.Parse(loggedUserIdString);
-
-            var roles = await _userService.GetAllRoles();
-            var adminRole = roles.FirstOrDefault(r => r.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-            var adminRoleId = adminRole?.Id;
-
-            var user = _userService.GetById(loggedUserId);
-
-            var isAdmin = user.Result?.RoleId == adminRoleId;
-
-            if (!isAdmin && loggedUserId != userId)
-                return Forbid();
-
             var castings = await _castingService.GetAllCastingsByUserId(userId);
             return Ok(castings.Select(c => c.ToReadDto()));
         }

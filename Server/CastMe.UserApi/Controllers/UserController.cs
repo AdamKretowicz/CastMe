@@ -84,7 +84,8 @@ namespace CastMe.UserApi.Controllers
         [HttpGet("/GetAll/{id:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(404)]
-        [RoleAuthorize("Admin")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> GetById(Guid id)
         {
             var user = await _userService.GetById(id);
@@ -135,16 +136,10 @@ namespace CastMe.UserApi.Controllers
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> Edit(Guid id, [FromBody] UserDto.Update dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
-            if (currentUserId is null)
-                return Forbid();
-
-            if (!User.IsInRole("Admin") && currentUserId != id.ToString())
-                return Forbid();
 
             var existingUser = await _userService.GetById(id);
             if (existingUser is null) return NotFound();
@@ -161,15 +156,9 @@ namespace CastMe.UserApi.Controllers
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> Patch(Guid id, [FromBody] JsonPatchDocument<UserDto.Update> patchDoc)
         {
-            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
-            if (currentUserId is null)
-                return Forbid();
-
-            if (!User.IsInRole("Admin") && currentUserId != id.ToString())
-                return Forbid();
-
             if (patchDoc is null) return BadRequest();
 
             var user = await _userService.GetById(id);
@@ -208,17 +197,11 @@ namespace CastMe.UserApi.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> Delete(Guid id)
         {
             var user = await _userService.GetById(id);
             if (user is null) return NotFound();
-
-            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
-            if (currentUserId is null)
-                return Forbid(); 
-
-            if (!User.IsInRole("Admin") && currentUserId != id.ToString())
-                return Forbid();
 
             await _userService.Delete(id);
             return NoContent();
@@ -243,7 +226,7 @@ namespace CastMe.UserApi.Controllers
         }
 
 
-        /// <summary>Get All Roles</summary>
+        /// <summary>Get All Roles but admin</summary>
         [HttpGet("roles")]
         [ProducesResponseType(typeof(IEnumerable<object>), 200)]
         public async Task<IActionResult> GetAllRoles()
