@@ -44,7 +44,7 @@ namespace Domain.Entities
         public CastingStatus Status { get; set; } = CastingStatus.Active;
 
         [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow.Date;
 
         public DateTime? UpdatedAt { get; set; }
 

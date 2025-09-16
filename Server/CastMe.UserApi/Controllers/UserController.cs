@@ -2,10 +2,10 @@
 using Application.Dtos;
 using Application.Interfaces;
 using CastMe.Domain.Entities;
+using Domain.Entities;
 using CastMe.User.CrossCutting.DTOs;
 using CastMe.UserApi.Mappers;
 using CastMe.UserApi.Services;
-using Domain.Entities;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.Extensions;
