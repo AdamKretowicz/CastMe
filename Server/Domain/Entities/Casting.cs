@@ -44,13 +44,12 @@ namespace Domain.Entities
         public CastingStatus Status { get; set; } = CastingStatus.Active;
 
         [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow.Date;
 
         public DateTime? UpdatedAt { get; set; }
 
         public ICollection<CastingRole> Roles { get; set; } = new List<CastingRole>();
         public ICollection<CastingTag> Tags { get; set; } = new List<CastingTag>();
-        // Relacja do przypisanych użytkowników w rolach
         public ICollection<CastingAssignment> Assignments { get; set; } = new List<CastingAssignment>();
 
     }

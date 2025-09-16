@@ -109,15 +109,15 @@ namespace Infrastructure.Migrations
                     LastName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Phone = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Height = table.Column<int>(type: "int", nullable: false),
-                    Weight = table.Column<int>(type: "int", nullable: false),
+                    Height = table.Column<int>(type: "int", nullable: true),
+                    Weight = table.Column<int>(type: "int", nullable: true),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Country = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     City = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Gender = table.Column<int>(type: "int", nullable: false),
-                    HairColor = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ClothingSize = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    HairColor = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ClothingSize = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     AcceptedTerms = table.Column<bool>(type: "bit", nullable: false)
@@ -166,6 +166,33 @@ namespace Infrastructure.Migrations
                         principalSchema: "User",
                         principalTable: "Users",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Experiences",
+                schema: "User",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProjectName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Link = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Experiences", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Experiences_Users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "User",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -226,6 +253,12 @@ namespace Infrastructure.Migrations
                 column: "CastingId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Experiences_UserId",
+                schema: "User",
+                table: "Experiences",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Photos_UserId",
                 table: "Photos",
                 column: "UserId");
@@ -251,6 +284,10 @@ namespace Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "CastingTags",
                 schema: "Casting");
+
+            migrationBuilder.DropTable(
+                name: "Experiences",
+                schema: "User");
 
             migrationBuilder.DropTable(
                 name: "Photos");

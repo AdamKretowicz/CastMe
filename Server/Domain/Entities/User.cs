@@ -1,4 +1,5 @@
-﻿using Domain.Entities;
+﻿using CastMe.Domain.Entities;
+using Domain.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
@@ -27,8 +28,8 @@ namespace CastMe.Domain.Entities
         public string Phone { get; set; } = default!;
 
         public DateTime DateOfBirth { get; set; }
-        public int Height { get; set; }
-        public int Weight { get; set; }
+        public int? Height { get; set; }
+        public int? Weight { get; set; }
         [EmailAddress]
         public string Email { get; set; } = default!;
         public string Country { get; set; } = default!;
@@ -37,12 +38,12 @@ namespace CastMe.Domain.Entities
 
         public Gender Gender { get; set; }
 
-        public string HairColor { get; set; } = default!;
-        public string ClothingSize { get; set; } = default!;
+        public string? HairColor { get; set; } = default!;
+        public string? ClothingSize { get; set; } = default!;
 
 
 
-        public ICollection<Photo> Photos { get; set; } = new List<Photo>();
+        public ICollection<Photo>? Photos { get; set; } = new List<Photo>();
 
 
         public Guid RoleId { get; set; }
@@ -57,5 +58,6 @@ namespace CastMe.Domain.Entities
         [AllowedValues(new object[] { true })]
         public bool AcceptedTerms { get; set; }
 
+        public virtual ICollection<Experience> Experiences { get; set; } = new List<Experience>();
     }
 }

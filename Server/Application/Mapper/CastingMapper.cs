@@ -50,7 +50,7 @@ namespace Application.Mapper
                 Requirements = dto.Requirements,
                 Compensation = dto.Compensation,
                 BannerUrl = dto.BannerUrl,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow.Date,
             };
             // Mapowanie ról
             casting.Roles = dto.Roles.Select(r => new CastingRole
@@ -77,7 +77,7 @@ namespace Application.Mapper
             casting.Compensation = dto.Compensation;
             casting.BannerUrl = dto.BannerUrl;
             casting.Status = dto.Status;
-            casting.UpdatedAt = DateTime.UtcNow;
+            casting.UpdatedAt = DateTime.UtcNow.Date;
             // Aktualizacja ról
             casting.Roles.Clear();
             foreach (var roleDto in dto.Roles)

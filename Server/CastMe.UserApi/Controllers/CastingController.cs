@@ -1,5 +1,6 @@
 ﻿using Application.Dtos;
 using Application.Mapper;
+using CastMe.Domain.Entities;
 using CastMe.UserApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -30,7 +31,7 @@ namespace WebApi.Controllers
 
 
 
-        //<summary>Get all castings.</summary>
+        ///<summary>Get all castings.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
@@ -40,7 +41,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
-        //<summary>Get casting by Id.</summary>
+        ///<summary>Get casting by Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetById)]
         [ProducesResponseType(typeof(CastingDto.Read), 200)]
         [ProducesResponseType(404)]
@@ -52,7 +53,7 @@ namespace WebApi.Controllers
             return Ok(casting.ToReadDto());
         }
 
-        //<summary>Get castings by organiser Id.</summary>
+        ///<summary>Get castings by organiser Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetByOrganiserId)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
@@ -63,7 +64,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
-        //<summary>Create new casting.</summary>
+        ///<summary>Create new casting.</summary>
         [HttpPost(Endpoints.CastingEndpoints.Create)]
         [ProducesResponseType(typeof(CastingDto.Read), 201)]
         [ProducesResponseType(400)]
@@ -77,7 +78,7 @@ namespace WebApi.Controllers
             return CreatedAtAction(nameof(GetById), new { id = casting.Id }, casting.ToReadDto());
         }
 
-        //<summary>Update existing casting.</summary>
+        ///<summary>Update existing casting.</summary>
         [HttpPut(Endpoints.CastingEndpoints.Update)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
@@ -106,7 +107,7 @@ namespace WebApi.Controllers
             await _castingService.Delete(id);
             return NoContent();
         }
-        //<summary>Get participants by casting Id.</summary>
+        ///<summary>Get participants by casting Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetParticipantsByCastingId)]
         [ProducesResponseType(typeof(CastingDto.ReadParticipants), 200)]
         [ProducesResponseType(404)]
@@ -126,28 +127,15 @@ namespace WebApi.Controllers
 
         }
 
-        //<summary> Add participant to casting by casting Id. </summary>
+        ///<summary> Add participant to casting by casting Id. </summary>
         [HttpPost(Endpoints.CastingEndpoints.AddParticipant)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
         public async Task<IActionResult> AddParticipant(Guid castingId, Guid userId)
         {
-            var loggedUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (loggedUserIdString == null) return Unauthorized();
 
-            var loggedUserId = Guid.Parse(loggedUserIdString);
-
-            var roles = await _userService.GetAllRoles();
-            var adminRole = roles.FirstOrDefault(r => r.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-            var adminRoleId = adminRole?.Id;
-
-            var user = _userService.GetById(loggedUserId);
-
-            var isAdmin = user.Result?.RoleId == adminRoleId;
-
-            if (!isAdmin && loggedUserId != userId)
-                return Forbid("You cannot add another user to the casting.");
 
             try
             {
@@ -161,29 +149,14 @@ namespace WebApi.Controllers
             }
         }
 
-        //<summary> Remove participant from casting by casting Id. </summary>
+        ///<summary> Remove participant from casting by casting Id. </summary>
         [HttpDelete(Endpoints.CastingEndpoints.RemoveParticipant)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
         public async Task<IActionResult> RemoveParticipant(Guid castingId, Guid userId)
         {
-            var loggedUserIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (loggedUserIdString == null) return Unauthorized();
-
-            var loggedUserId = Guid.Parse(loggedUserIdString);
-
-            var roles = await _userService.GetAllRoles();
-            var adminRole = roles.FirstOrDefault(r => r.Name.Equals("Admin", StringComparison.OrdinalIgnoreCase));
-            var adminRoleId = adminRole?.Id;
-
-            var user = _userService.GetById(loggedUserId);
-
-            var isAdmin = user.Result?.RoleId == adminRoleId;
-
-            if (!isAdmin && loggedUserId != userId)
-                return Forbid("You cannot add another user to the casting.");
-
             try
             {
                 await _castingService.RemoveParticipant(castingId, userId);
@@ -196,6 +169,50 @@ namespace WebApi.Controllers
             }
         }
 
+        ///<summary> Get Castings By Participant Id</summary>
+        [HttpGet(Endpoints.CastingEndpoints.GetCastingsByParticipantId)]
+        [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
+        public async Task<ActionResult<IEnumerable<CastingDto.Read>>> GetCastingsByParticipantId([FromRoute] Guid userId)
+        {
+            var castings = await _castingService.GetAllCastingsByUserId(userId);
+            return Ok(castings.Select(c => c.ToReadDto()));
+        }
 
+        /// <summary>
+        /// Changes the status of a casting.
+        /// </summary>
+        /// <param name="castingId"></param>
+        /// <param name="status">Options: Active, Closed, Cancelled, Finished </param>
+        /// <returns></returns>
+        [HttpGet(Endpoints.CastingEndpoints.ChangeCastingStatus)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> ChangeCastingStatus(Guid castingId, string status)
+        {
+            try
+            {
+                CastingStatus castingStatus;
+                if (!Enum.TryParse<CastingStatus>(status, true, out castingStatus)) 
+                {
+                    return BadRequest(new { message = "Invalid status value. Allowed values are: Active, Closed, Cancelled, Finished." });
+                }
+
+
+
+                await _castingService.ChangeCastingStatus(castingId, castingStatus);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to change casting status. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+
+
+        }
     }
 }

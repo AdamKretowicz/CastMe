@@ -5,7 +5,9 @@ namespace Application.Interfaces
 {
     public interface IEmailSender
     {
-        Task SendEmailAsync(EmailForm dto);
+        Task SendEmailAsync(EmailDto.Send dto);
+
+        Task SendFormAsync(EmailDto.Form dto);
     }
 }
 

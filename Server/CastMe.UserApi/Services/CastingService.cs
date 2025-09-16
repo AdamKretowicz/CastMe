@@ -90,6 +90,18 @@ namespace WebApi.Services
             await _context.SaveChangesAsync();
         }
 
+        public async Task<IEnumerable<Domain.Entities.Casting>> GetAllCastingsByUserId(Guid userId) =>
+            await _context.Castings
+            .Where(c => c.Assignments.Any(a => a.UserId == userId))
+            .ToListAsync();
+
+        public async Task<Casting> ChangeCastingStatus(Guid castingId, CastingStatus status)
+        {
+            var casting = await _context.Castings
+                .Where(c => c.Id == castingId)
+                .ExecuteUpdateAsync(c => c.SetProperty(c => c.Status, c => status));
+            return await GetById(castingId) ?? throw new KeyNotFoundException("Casting not found");
+        }
 
 
     }

@@ -39,6 +39,7 @@ namespace CastMe.Api.Controllers
         [ProducesResponseType(typeof(PhotoDto), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> Uploaad(
             [FromRoute] Guid userId,
             [FromForm] UploadPhotoForm form,   // <- DTO z IFormFile
@@ -58,6 +59,7 @@ namespace CastMe.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> Delete([FromRoute] Guid userId, [FromRoute] Guid photoId, CancellationToken ct)
         {
             var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
@@ -78,6 +80,7 @@ namespace CastMe.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> SetMain([FromRoute] Guid userId, [FromRoute] Guid photoId, CancellationToken ct)
         {
             await _service.SetMainAsync(userId, photoId, ct);
@@ -90,6 +93,7 @@ namespace CastMe.Api.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
+        [CurrentUser]
         public async Task<IActionResult> Reorder(
             [FromRoute] Guid userId,
             [FromBody] ReorderPhotosRequest body,

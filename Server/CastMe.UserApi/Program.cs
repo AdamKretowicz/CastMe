@@ -9,11 +9,13 @@ using Infrastructure.Security;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using WebApi.Extensions;
 using WebApi.Infrastructure.Email;
 using WebApi.Services;
@@ -71,6 +73,17 @@ builder.Services.AddDbContext<UserDbContext>(options =>
 // Opcje JWT (POCO w Infrastructure/Auth)
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 
+// Added Front Cross acces
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins("http://localhost:5174") // port Vite
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Opcje SMTP
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SMTP"));
 
@@ -121,6 +134,23 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IUserFilterRepository, UserFilterRepository>();
+builder.Services.AddScoped<IExperienceService, ExperienceService>();
+builder.Services.AddScoped<ProfileService>();
+
+
+
+// Rate limiting per IP for Email Form
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("ContactFormLimiter", opt =>
+    {
+        opt.PermitLimit = 5;                  
+        opt.Window = TimeSpan.FromMinutes(6); 
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+});
 
 
 var app = builder.Build();
@@ -162,7 +192,7 @@ if (app.Environment.IsDevelopment())
         await next.Invoke();
     });
 }
-
+app.UseCors();
 
 app.UseAuthentication();   // WAŻNE: przed UseAuthorization
 app.UseAuthorization();

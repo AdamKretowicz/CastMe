@@ -15,6 +15,7 @@ public class UserDbContext : DbContext
     public DbSet<CastingTag> Tags { get; set; } = null!;
     public DbSet<UserRole> UserRoles { get; set; } = null!;
     public DbSet<CastingAssignment> Assignments { get; set; } = null!;
+    public DbSet<Experience> Experiences { get; set; } = null!;
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

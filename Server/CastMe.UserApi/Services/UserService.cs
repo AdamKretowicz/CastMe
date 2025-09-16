@@ -12,15 +12,12 @@ namespace CastMe.UserApi.Services
     public class UserService
     {
         private readonly UserDbContext _context;
-        private readonly IEmailSender _emailSender;
         private readonly IUserRepository _userRepo;
         private readonly IRoleRepository _roleRepo;
-        private readonly IPhotoService _photoService;
 
-        public UserService(UserDbContext context, IEmailSender emailSender, IUserRepository userRepo, IRoleRepository roleRepo)
+        public UserService(UserDbContext context, IUserRepository userRepo, IRoleRepository roleRepo)
         {
             _context = context;
-            _emailSender = emailSender;
             _userRepo = userRepo;
             _roleRepo = roleRepo;
         }
@@ -65,45 +62,7 @@ namespace CastMe.UserApi.Services
             }
             user.Status = newStatus;
             await _context.SaveChangesAsync();
-            try
-            {
-                var emailMessage = newStatus switch
-                {
-                    UserStatus.Active => "Twoje konto zostało aktywowane.",
-                    UserStatus.Rejected => "Twoje konto nie zostało zaakceptowane. Dziękujemy za zainteresowanie",
-                    _ => "Status Twojego konta został zaktualizowany."
-                };
-
-
-                var email = new EmailForm
-                {
-                    To = user.Email,
-                    Subject = "Aktualizacja Statusu",
-                    Message = emailMessage,
-                };
-
-                if (newStatus == UserStatus.Rejected)
-                {
-                    var photos = await _photoService.GetUserPhotosAsync(user.Id);
-                    foreach (var photo in photos)
-                    {
-                        await _photoService.DeleteAsync(user.Id, photo.Id);
-                    }
-
-                }
-
-
-                await _emailSender.SendEmailAsync(email);
-                return user; // Status updated successfully
-            }
-            catch(Exception e)
-            {
-                throw new Exception(e.Message);
-
-            }
-            
-
-
+            return user;
         }
 
         public async Task<IEnumerable<UserRole>> GetAllRoles()
@@ -122,7 +81,7 @@ namespace CastMe.UserApi.Services
         public async Task<UserRole> GetRoleByUserId(Guid userId)
         {
             var user = await _userRepo.GetByIdAsync(userId);
-            if (user == null || user.RoleId == null)
+            if (user == null)
                 throw new Exception("User or Role not found");
 
             var role = await _roleRepo.GetByIdAsync(user.RoleId);

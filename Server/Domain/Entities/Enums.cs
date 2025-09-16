@@ -25,7 +25,8 @@ namespace CastMe.Domain.Entities
     {
         Active = 1,
         Closed = 2,
-        Cancelled = 3
+        Cancelled = 3,
+        Finished = 4
     }
 
 
