@@ -1,5 +1,6 @@
 ﻿using Application.Dtos;
 using Application.Mapper;
+using CastMe.Domain.Entities;
 using CastMe.UserApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -180,9 +181,28 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
+        ///<summary> </summary>
+        [HttpGet(Endpoints.CastingEndpoints.ChangeCastingStatus)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> ChangeCastingStatus(Guid castingId, string status)
+        {
+            try
+            {
+                var castingStatus = Enum.Parse<CastingStatus>(status, true);
 
 
+                await _castingService.ChangeCastingStatus(castingId, castingStatus);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to change casting status. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
 
 
+        }
     }
 }

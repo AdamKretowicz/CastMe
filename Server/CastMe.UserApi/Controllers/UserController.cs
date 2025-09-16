@@ -290,9 +290,9 @@ namespace CastMe.UserApi.Controllers
         [HttpGet("/FilterUsers")]
         [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
-        public async Task<IActionResult> FilterUsers([FromQuery] ModelFilterDto filter)
+        public async Task<IActionResult> FilterUsers([FromQuery] ModelFilterDto filter, [FromQuery] int pageNumber, [FromQuery] int pageSize)
         {
-            var users = await _userFilter.GetFilteredAsync(filter);
+            var users = await _userFilter.GetFilteredAsync(filter,pageNumber,pageSize);
             return Ok(users.Select(u => u.ToReadDto()));
         }
 

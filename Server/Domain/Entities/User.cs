@@ -57,5 +57,6 @@ namespace CastMe.Domain.Entities
         [AllowedValues(new object[] { true })]
         public bool AcceptedTerms { get; set; }
 
+        public virtual ICollection<Experience> Experiences { get; set; } = new List<Experience>();
     }
 }

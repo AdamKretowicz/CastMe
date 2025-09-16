@@ -10,6 +10,6 @@ namespace Application.Interfaces
 {
     public interface IUserFilterRepository
     {
-        Task<List<User>> GetFilteredAsync(ModelFilterDto filter, CancellationToken ct = default);
+        Task<List<User>> GetFilteredAsync(ModelFilterDto filter,int pageNumber ,int pageSize, CancellationToken ct = default);
     }
 }

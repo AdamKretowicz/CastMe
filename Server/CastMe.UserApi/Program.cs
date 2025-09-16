@@ -135,6 +135,7 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserFilterRepository, UserFilterRepository>();
+builder.Services.AddScoped<IExperienceService, ExperienceService>();
 
 
 

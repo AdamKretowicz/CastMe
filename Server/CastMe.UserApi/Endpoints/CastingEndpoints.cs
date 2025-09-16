@@ -14,5 +14,6 @@
         public const string AddParticipant = basePath + "/{castingId:guid}/participant/{userId:guid}";
         public const string RemoveParticipant = basePath + "/{castingId:guid}/participant/{userId:guid}";
         public const string GetCastingsByParticipantId = basePath + "/participant/{userId:guid}";
+        public const string ChangeCastingStatus = basePath + "/{id:guid}/status";
     }
 }

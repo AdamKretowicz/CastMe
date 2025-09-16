@@ -72,7 +72,7 @@ namespace Infrastructure.Migrations
         {
             user1Id,
             "admin",
-            BCrypt.Net.BCrypt.HashPassword("admin"),
+            BCrypt.Net.BCrypt.HashPassword("password123"),
             "Sophia",
             "Martinez",
             "+1-555-0101",
@@ -134,7 +134,57 @@ namespace Infrastructure.Migrations
             true,
         }
     });
-
+            migrationBuilder.InsertData(
+    schema: "User",
+    table: "Experiences",
+    columns: new[] { "Id", "UserId", "ProjectName", "Role", "Description", "StartDate", "EndDate", "Link", "CreatedAt" },
+    values: new object[,]
+    {
+        {
+            Guid.NewGuid(), // lub stałe Id np. exp1Id
+            user1Id,
+            "Fashion Week Paris 2022",
+            "Runway Model",
+            "Participated in Paris Fashion Week, modeling for several international designers.",
+            new DateTime(2022, 9, 15),
+            new DateTime(2022, 9, 20),
+            "https://example.com/fashionweek2022",
+            DateTime.UtcNow
+        },
+        {
+            Guid.NewGuid(),
+            user1Id,
+            "Commercial Shoot for XYZ Brand",
+            "Model",
+            "Worked on a commercial shoot for XYZ brand, featured in national campaign.",
+            new DateTime(2021, 6, 5),
+            new DateTime(2021, 6, 10),
+            "https://example.com/xyzshoot",
+            DateTime.UtcNow
+        },
+        {
+            Guid.NewGuid(),
+            user2Id,
+            "Editorial Photoshoot for Vogue",
+            "Photographer",
+            "Captured editorial photos for Vogue magazine's summer edition.",
+            new DateTime(2023, 4, 1),
+            new DateTime(2023, 4, 5),
+            "https://example.com/vogueeditorial",
+            DateTime.UtcNow
+        },
+        {
+            Guid.NewGuid(),
+            user3Id,
+            "Casting for ABC Commercial",
+            "Casting Director",
+            "Managed casting process for ABC commercial, selecting models and coordinating shoots.",
+            new DateTime(2022, 11, 10),
+            new DateTime(2022, 11, 15),
+            null,
+            DateTime.UtcNow
+        }
+    });
 
             // Seed Castings
             migrationBuilder.InsertData(

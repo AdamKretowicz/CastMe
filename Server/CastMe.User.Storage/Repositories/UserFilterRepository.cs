@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Quic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,7 +18,7 @@ namespace Infrastructure.Repositories
 
         public UserFilterRepository(UserDbContext context) => _context = context;
 
-        public async Task<List<User>> GetFilteredAsync(ModelFilterDto filter, CancellationToken ct = default)
+        public async Task<List<User>> GetFilteredAsync(ModelFilterDto filter,int pagenumber = 1, int pageSize = 10, CancellationToken ct = default)
         {
             IQueryable<User> query = _context.Users.AsNoTracking();
 
@@ -54,6 +55,8 @@ namespace Infrastructure.Repositories
             {
                 query = query.Where(p => cities.Contains(p.City));
             }
+
+            query = query.Skip((pagenumber - 1) * pageSize).Take(pageSize);
 
             return await query.ToListAsync(ct);
         }
