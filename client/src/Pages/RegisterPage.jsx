@@ -9,25 +9,25 @@ import { policy } from "../data/policy";
 const RegisterPage = () => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    userName: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-    country: "",
-    city: "",
-    gender: "",
-    dateOfBirth: "",
-    height: "",
-    weight: "",
-    hairColor: "",
-    clothingSize: "",
-    description: "",
-    role: "",
-    photos: [""], // tablica zdjęć
-    acceptTerms: false,
+    UserName: "",
+    FirstName: "",
+    LastName: "",
+    Email: "",
+    Phone: "",
+    Password: "",
+    Country: "",
+    City: "",
+    Gender: 0,
+    DateOfBirth: "",
+    Height: 0,
+    Weight: 0,
+    HairColor: "",
+    ClothingSize: "",
+    Description: "",
+    RoleName: "",
+    Photos: [],
+    AcceptTerms: false,
+    ConfirmPassword: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -38,49 +38,45 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const roles = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
 
-  const handleChange = (e, index = null) => {
+  const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
-    // Obsługa dynamicznych zdjęć
-    if (name === "photos" && index !== null) {
-      const updatedPhotos = [...formData.photos];
-      updatedPhotos[index] = value;
-      setFormData((prev) => ({ ...prev, photos: updatedPhotos }));
-      return;
-    }
 
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "number"
+          ? parseInt(value, 10) || 0
+          : value,
     }));
 
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const addPhotoField = () => {
-    setFormData((prev) => ({ ...prev, photos: [...prev.photos, ""] }));
+  const handleFileChange = (e) => {
+    const newFiles = Array.from(e.target.files);
+    setFormData((prev) => ({
+      ...prev,
+      Photos: [...prev.Photos, ...newFiles], // 🔥 doklejanie zamiast nadpisywania
+    }));
+
+    // reset input, żeby można było dodać ten sam plik ponownie
+    e.target.value = "";
   };
 
   // Walidacja pierwszego kroku
   const validateStep1 = () => {
     const newErrors = {};
-    if (!formData.firstName) newErrors.firstName = "Imię jest wymagane";
-    else if (formData.firstName.length < 2)
-      newErrors.firstName = "Imię musi mieć min. 2 znaki";
-
-    if (!formData.lastName) newErrors.lastName = "Nazwisko jest wymagane";
-    else if (formData.lastName.length < 2)
-      newErrors.lastName = "Nazwisko musi mieć min. 2 znaki";
-
-    if (!formData.email) newErrors.email = "Email jest wymagany";
-    if (!formData.phone) newErrors.phone = "Telefon jest wymagany";
-
-    if (!formData.password) newErrors.password = "Hasło jest wymagane";
-    if (formData.password !== formData.confirmPassword)
-      newErrors.confirmPassword = "Hasła muszą się zgadzać";
-
-    if (!formData.acceptTerms)
-      newErrors.acceptTerms = "Musisz zaakceptować regulamin";
+    if (!formData.FirstName) newErrors.FirstName = "Imię jest wymagane";
+    if (!formData.LastName) newErrors.LastName = "Nazwisko jest wymagane";
+    if (!formData.Email) newErrors.Email = "Email jest wymagany";
+    if (!formData.Phone) newErrors.Phone = "Telefon jest wymagany";
+    if (!formData.Password) newErrors.Password = "Hasło jest wymagane";
+    if (formData.Password !== formData.ConfirmPassword)
+      newErrors.ConfirmPassword = "Hasła muszą się zgadzać";
+    if (!formData.AcceptTerms)
+      newErrors.AcceptTerms = "Musisz zaakceptować regulamin";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -89,19 +85,22 @@ const RegisterPage = () => {
   // Walidacja drugiego kroku
   const validateStep2 = () => {
     const newErrors = {};
-    const today = new Date().toISOString().split("T")[0];
-
-    if (!formData.userName)
-      newErrors.userName = "Nazwa użytkownika jest wymagana";
-    else if (formData.userName.length < 3)
-      newErrors.userName = "Nazwa użytkownika min. 3 znaki";
-
-    if (!formData.role) newErrors.role = "Rola jest wymagana";
-
-    if (!formData.dateOfBirth)
-      newErrors.dateOfBirth = "Data urodzenia jest wymagana";
-    else if (formData.dateOfBirth > today)
-      newErrors.dateOfBirth = "Data urodzenia nie może być przyszła";
+    if (!formData.UserName)
+      newErrors.UserName = "Nazwa użytkownika jest wymagana";
+    if (!formData.RoleName) newErrors.RoleName = "Rola jest wymagana";
+    if (!formData.DateOfBirth)
+      newErrors.DateOfBirth = "Data urodzenia jest wymagana";
+    if (!formData.Country) newErrors.Country = "Kraj jest wymagany";
+    if (!formData.City) newErrors.City = "Miasto jest wymagane";
+    if (!formData.HairColor) newErrors.HairColor = "Kolor włosów jest wymagany";
+    if (!formData.ClothingSize)
+      newErrors.ClothingSize = "Rozmiar odzieży jest wymagany";
+    if (!formData.Height || formData.Height <= 0)
+      newErrors.Height = "Wzrost jest wymagany";
+    if (!formData.Weight || formData.Weight <= 0)
+      newErrors.Weight = "Waga jest wymagana";
+    if (!formData.Photos || formData.Photos.length === 0)
+      newErrors.Photos = "Musisz dodać przynajmniej jedno zdjęcie";
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -113,9 +112,18 @@ const RegisterPage = () => {
 
     setIsLoading(true);
     try {
-      const result = await register(formData);
-      if (result.success) navigate("/dashboard");
-      else setErrors({ form: result.error });
+      const payload = {
+        ...formData,
+        DateOfBirth: new Date(formData.DateOfBirth).toISOString(),
+      };
+
+      const result = await register(payload);
+
+      if (result.success) {
+        navigate("/dashboard");
+      } else {
+        setErrors({ form: result.error });
+      }
     } catch (error) {
       console.error(error);
       setErrors({ form: "Wystąpił błąd podczas rejestracji" });
@@ -126,7 +134,6 @@ const RegisterPage = () => {
 
   return (
     <div className="relative min-h-screen">
-      {/* Strona główna z formularzem */}
       <div
         className={`${
           showModal ? "opacity-40" : "opacity-100"
@@ -164,56 +171,56 @@ const RegisterPage = () => {
                     <>
                       <Input
                         label="Imię"
-                        name="firstName"
-                        value={formData.firstName}
+                        name="FirstName"
+                        value={formData.FirstName}
                         onChange={handleChange}
-                        error={errors.firstName}
+                        error={errors.FirstName}
                       />
                       <Input
                         label="Nazwisko"
-                        name="lastName"
-                        value={formData.lastName}
+                        name="LastName"
+                        value={formData.LastName}
                         onChange={handleChange}
-                        error={errors.lastName}
+                        error={errors.LastName}
                       />
                       <Input
                         label="Email"
-                        name="email"
+                        name="Email"
                         type="email"
-                        value={formData.email}
+                        value={formData.Email}
                         onChange={handleChange}
-                        error={errors.email}
+                        error={errors.Email}
                       />
                       <Input
                         label="Telefon"
-                        name="phone"
-                        value={formData.phone}
+                        name="Phone"
+                        value={formData.Phone}
                         onChange={handleChange}
-                        error={errors.phone}
+                        error={errors.Phone}
                       />
                       <Input
                         label="Hasło"
-                        name="password"
+                        name="Password"
                         type="password"
-                        value={formData.password}
+                        value={formData.Password}
                         onChange={handleChange}
-                        error={errors.password}
+                        error={errors.Password}
                       />
                       <Input
                         label="Potwierdź hasło"
-                        name="confirmPassword"
+                        name="ConfirmPassword"
                         type="password"
-                        value={formData.confirmPassword}
+                        value={formData.ConfirmPassword}
                         onChange={handleChange}
-                        error={errors.confirmPassword}
+                        error={errors.ConfirmPassword}
                       />
 
                       {/* Regulamin */}
                       <div className="flex items-start">
                         <input
                           type="checkbox"
-                          name="acceptTerms"
-                          checked={formData.acceptTerms}
+                          name="AcceptTerms"
+                          checked={formData.AcceptTerms}
                           onChange={handleChange}
                           className="h-4 w-4 text-[#EA1A62] border-gray-300 rounded"
                         />
@@ -230,8 +237,8 @@ const RegisterPage = () => {
                           .
                         </label>
                       </div>
-                      {errors.acceptTerms && (
-                        <p className="text-red-500">{errors.acceptTerms}</p>
+                      {errors.AcceptTerms && (
+                        <p className="text-red-500">{errors.AcceptTerms}</p>
                       )}
 
                       {/* Nawigacja */}
@@ -259,30 +266,32 @@ const RegisterPage = () => {
                     <>
                       <Input
                         label="Nazwa użytkownika"
-                        name="userName"
-                        value={formData.userName}
+                        name="UserName"
+                        value={formData.UserName}
                         onChange={handleChange}
-                        error={errors.userName}
+                        error={errors.UserName}
                       />
                       <Input
                         label="Data urodzenia"
-                        name="dateOfBirth"
+                        name="DateOfBirth"
                         type="date"
-                        value={formData.dateOfBirth}
+                        value={formData.DateOfBirth}
                         onChange={handleChange}
-                        error={errors.dateOfBirth}
+                        error={errors.DateOfBirth}
                       />
                       <Input
                         label="Kraj"
-                        name="country"
-                        value={formData.country}
+                        name="Country"
+                        value={formData.Country}
                         onChange={handleChange}
+                        error={errors.Country}
                       />
                       <Input
                         label="Miasto"
-                        name="city"
-                        value={formData.city}
+                        name="City"
+                        value={formData.City}
                         onChange={handleChange}
+                        error={errors.City}
                       />
 
                       {/* Płeć */}
@@ -291,67 +300,79 @@ const RegisterPage = () => {
                           Płeć
                         </label>
                         <div className="flex gap-4">
-                          {["Mężczyzna", "Kobieta", "Inna"].map(
-                            (label, idx) => (
-                              <label
-                                key={label}
-                                className="flex items-center gap-1"
-                              >
-                                <input
-                                  type="radio"
-                                  name="gender"
-                                  value={idx}
-                                  checked={formData.gender === String(idx)}
-                                  onChange={handleChange}
-                                />
-                                {label}
-                              </label>
-                            )
-                          )}
+                          {[
+                            { id: 1, label: "Mężczyzna" },
+                            { id: 2, label: "Kobieta" },
+                            { id: 3, label: "Inna" },
+                          ].map((opt) => (
+                            <label
+                              key={opt.id}
+                              className="flex items-center gap-1"
+                            >
+                              <input
+                                type="radio"
+                                name="Gender"
+                                value={opt.id}
+                                checked={formData.Gender === opt.id}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    Gender: parseInt(e.target.value, 10),
+                                  }))
+                                }
+                              />
+                              {opt.label}
+                            </label>
+                          ))}
                         </div>
                       </div>
 
                       <Input
                         label="Wzrost"
-                        name="height"
+                        name="Height"
                         type="number"
-                        value={formData.height}
+                        value={formData.Height}
                         onChange={handleChange}
+                        error={errors.Height}
                       />
                       <Input
                         label="Waga (kg)"
-                        name="weight"
+                        name="Weight"
                         type="number"
-                        value={formData.weight}
+                        value={formData.Weight}
                         onChange={handleChange}
+                        error={errors.Weight}
                       />
                       <Input
                         label="Kolor włosów"
-                        name="hairColor"
-                        value={formData.hairColor}
+                        name="HairColor"
+                        value={formData.HairColor}
                         onChange={handleChange}
+                        error={errors.HairColor}
                       />
                       <Input
-                        label="Wymiary (biust, klatka, talia, biodra, rozmiar ubrania, stopy)"
-                        name="clothingSize"
-                        value={formData.clothingSize}
+                        label="Rozmiar odzieży"
+                        name="ClothingSize"
+                        value={formData.ClothingSize}
                         onChange={handleChange}
+                        error={errors.ClothingSize}
                       />
                       <Input
                         label="Opis"
-                        name="description"
-                        value={formData.description}
+                        name="Description"
+                        value={formData.Description}
                         onChange={handleChange}
+                        error={errors.Description}
                       />
 
-                      {/* Stylizowany select roli */}
+                      {/* Rola */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           Rola
                         </label>
                         <select
-                          name="role"
-                          value={formData.role}
+                          name="RoleName"
+                          value={formData.RoleName}
                           onChange={handleChange}
                           className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62]"
                         >
@@ -362,35 +383,77 @@ const RegisterPage = () => {
                             </option>
                           ))}
                         </select>
-                        {errors.role && (
-                          <p className="text-red-500">{errors.role}</p>
+                        {errors.RoleName && (
+                          <p className="text-red-500">{errors.RoleName}</p>
                         )}
                       </div>
 
-                      {/* Wiele zdjęć */}
+                      {/* Zdjęcia */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                           Zdjęcia
                         </label>
-                        {formData.photos.map((photo, index) => (
-                          <div key={index} className="flex gap-2 mb-2">
-                            <input
-                              type="text"
-                              name="photos"
-                              value={photo}
-                              onChange={(e) => handleChange(e, index)}
-                              placeholder="Link do zdjęcia"
-                              className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62]"
-                            />
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={addPhotoField}
-                          className="text-pink-600 hover:underline text-sm"
+
+                        {/* Ukryty input plików */}
+                        <input
+                          type="file"
+                          id="photoUpload"
+                          name="Photos"
+                          multiple
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+
+                        {/* Stylizowany button */}
+                        <label
+                          htmlFor="photoUpload"
+                          className="inline-flex items-center px-4 py-2 bg-pink-600 text-white text-sm font-medium rounded-lg shadow hover:bg-pink-700 cursor-pointer"
                         >
-                          + Dodaj kolejne zdjęcie
-                        </button>
+                          Wybierz zdjęcia
+                        </label>
+
+                        {/* Lista kafelków */}
+                        <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                          {formData.Photos &&
+                            Array.from(formData.Photos).map((file, index) => (
+                              <div
+                                key={index}
+                                className="relative border rounded-lg p-2 flex flex-col items-center bg-gray-50 shadow-sm"
+                              >
+                                {/* Miniatura */}
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt={`photo-${index}`}
+                                  className="w-full h-24 object-cover rounded-md"
+                                />
+
+                                {/* Nazwa pliku */}
+                                <p className="text-xs mt-2 text-gray-600 truncate w-full text-center">
+                                  {file.name}
+                                </p>
+
+                                {/* Krzyżyk do usuwania */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updatedPhotos = [...formData.Photos];
+                                    updatedPhotos.splice(index, 1);
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      Photos: updatedPhotos,
+                                    }));
+                                  }}
+                                  className="absolute top-1 right-1 bg-pink-600 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-pink-700"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+
+                        {errors.Photos && (
+                          <p className="text-red-500 mt-2">{errors.Photos}</p>
+                        )}
                       </div>
 
                       {/* Nawigacja */}
