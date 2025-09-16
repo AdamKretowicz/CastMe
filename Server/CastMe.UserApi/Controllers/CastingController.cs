@@ -181,12 +181,7 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
-        /// <summary>
-        /// Changes the status of a casting.
-        /// </summary>
-        /// <param name="castingId"></param>
-        /// <param name="status">Options: Active, Closed, Cancelled, Finished </param>
-        /// <returns></returns>
+        ///<summary> </summary>
         [HttpGet(Endpoints.CastingEndpoints.ChangeCastingStatus)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
@@ -195,12 +190,7 @@ namespace WebApi.Controllers
         {
             try
             {
-                CastingStatus castingStatus;
-                if (!Enum.TryParse<CastingStatus>(status, true, out castingStatus)) 
-                {
-                    return BadRequest(new { message = "Invalid status value. Allowed values are: Active, Closed, Cancelled, Finished." });
-                }
-
+                var castingStatus = Enum.Parse<CastingStatus>(status, true);
 
 
                 await _castingService.ChangeCastingStatus(castingId, castingStatus);
