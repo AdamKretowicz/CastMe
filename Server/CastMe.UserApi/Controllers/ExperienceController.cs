@@ -14,23 +14,15 @@ namespace WebApi.Controllers
     [Produces("application/json")]
     public class ExperienceController : ControllerBase
     {
-        private readonly UserService _userService;
-        private readonly ILogger<ExperienceController> _logger;
-        private readonly IEmailSender _emailSender;
-        private readonly IPhotoService _photoService;
-        private readonly IUserFilterRepository _userFilter;
+
         private readonly IExperienceService _experienceService;
 
-        public ExperienceController(UserService userService, ILogger<ExperienceController> logger, IEmailSender emailSender, IPhotoService photoService, IUserFilterRepository userFilter, IExperienceService experienceService)
+        public ExperienceController(IExperienceService experienceService)
         {
-            _userService = userService;
-            _logger = logger;
-            _emailSender = emailSender;
-            _photoService = photoService;
-            _userFilter = userFilter;
             _experienceService = experienceService;
         }
 
+        ///<summary> Retrieves the experience details for a specific user by their ID. </summary>
         [HttpGet(ExperienceEndpoints.GetExperiencesByUserId)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -44,6 +36,12 @@ namespace WebApi.Controllers
             return Ok(experience.ToReadDto());
         }
 
+        /// <summary>
+        /// Adds a new experience entry for a specific user.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="experienceDto"></param>
+        /// <returns></returns>
         [HttpPost(ExperienceEndpoints.AddExperience)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -55,6 +53,14 @@ namespace WebApi.Controllers
             var createdExperience = await _experienceService.AddExperience(userId, experience);
             return CreatedAtAction(nameof(GetByUserId), new { userId = userId }, createdExperience.ToReadDto());
         }
+
+
+        /// <summary>
+        /// Updates an existing experience entry for a specific user.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <param name="experienceDto"></param>
+        /// <returns></returns>
         [HttpPut(ExperienceEndpoints.UpdateExperience)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -71,6 +77,11 @@ namespace WebApi.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Deletes the experience entry for a specific user.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
         [HttpDelete(ExperienceEndpoints.DeleteExperience)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

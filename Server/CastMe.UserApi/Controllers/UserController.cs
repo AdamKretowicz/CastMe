@@ -220,7 +220,7 @@ namespace CastMe.UserApi.Controllers
             await _userService.Delete(id);
             return NoContent();
         }
-        //<summary>Update user status (Admin only).</summary>
+        ///<summary>Update user status (Admin only).</summary>
         [HttpPut("{userId}/statusUpdate")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(400)]
@@ -286,7 +286,11 @@ namespace CastMe.UserApi.Controllers
 
             return Ok(rolesDto);
         }
-
+        /// <summary>
+        /// Used to filter users based on various criteria. 
+        /// Available to Admin, Model, Photographer, Designer, Volunteer, Guest roles.
+        /// </summary>
+        /// <returns></returns>
         [HttpGet("/FilterUsers")]
         [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
