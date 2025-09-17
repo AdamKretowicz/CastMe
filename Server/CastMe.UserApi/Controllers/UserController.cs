@@ -349,5 +349,18 @@ namespace CastMe.UserApi.Controllers
         }
 
 
+        [HttpGet("/GetRoleByUserId/{userId}")]
+        [ProducesResponseType(typeof(object), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
+        public async Task<IActionResult> GetRoleByUserId(Guid userId)
+        {
+            var role = await _userService.GetRoleByUserId(userId);
+            if (role == null) return NotFound();
+            var roleDto = new { role.Name };
+            return Ok(roleDto);
+        }
+
     }
 }

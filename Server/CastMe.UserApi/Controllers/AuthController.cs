@@ -143,6 +143,7 @@ namespace WebApi.Controllers
                 return BadRequest(new { message = "Missing credentials" });
 
             var user = await _db.Users
+                .Include(r=>r.Role)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.UserName == dto.UserName||u.Email == dto.UserName);
 
@@ -163,7 +164,7 @@ namespace WebApi.Controllers
                 accessToken,
                 expiresAtUtc,
                 refreshToken,
-                user = new { user.Id, user.UserName, user.Email, user.FirstName, user.LastName }
+                user = new { user.Id, user.UserName, user.Email, user.FirstName, user.LastName, role = user.Role.Name }
             });
         }
     }
