@@ -1,3 +1,5 @@
+// src/utils/api.js
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 // Funkcja do pobierania tokena z localStorage
@@ -32,4 +34,32 @@ export async function apiFetch(endpoint, options = {}) {
   }
 
   return res.json();
+}
+
+// =============================
+// Funkcje API dla profilu
+// =============================
+
+// Pobieranie profilu użytkownika
+export async function fetchUserProfile(userId) {
+  return apiFetch(`/user/profile/${userId}`);
+}
+
+// Aktualizacja własnego profilu
+export async function updateUserProfile(userId, data) {
+  return apiFetch(`/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
+
+// Upload zdjęcia do profilu
+export async function uploadUserPhoto(userId, file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiFetch(`/users/${userId}/photos`, {
+    method: "POST",
+    body: formData,
+  });
 }

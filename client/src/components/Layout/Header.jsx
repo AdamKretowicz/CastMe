@@ -153,7 +153,7 @@ const Header = () => {
             ) : (
               <div className="flex items-center space-x-4">
                 <Link
-                  to="/profile"
+                  to={`/profile/${currentUser.id}`}
                   className="flex items-center space-x-2 text-gray-600 hover:text-[#EA1A62]"
                 >
                   <User className="w-4 h-4" />
