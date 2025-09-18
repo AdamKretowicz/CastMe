@@ -10,6 +10,7 @@ import RegisterPage from "./Pages/RegisterPage";
 import Dashboard from "./Pages/Dashboard";
 import ProfilePage from "./Pages/ProfilePage";
 import AboutPage from "./Pages/About";
+import EditProfilePage from "./Pages/EditProfilePage";
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile/:userId" element={<ProfilePage />} />
                 <Route path="/about" element={<AboutPage />} />
+                <Route path="/edit-profile" element={<EditProfilePage />} />
               </Routes>
             </main>
             <Footer />
