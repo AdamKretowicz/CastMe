@@ -26,7 +26,7 @@ namespace WebApi.Controllers
         [HttpGet(ExperienceEndpoints.GetExperiencesByUserId)]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [RoleAuthorize("Admin", "Model")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer")]
         [CurrentUser]
         public async Task<IActionResult> GetByUserId([FromRoute] Guid userId)
         {
@@ -45,7 +45,7 @@ namespace WebApi.Controllers
         [HttpPost(ExperienceEndpoints.AddExperience)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [RoleAuthorize("Admin", "Model")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer")]
         [CurrentUser]
         public async Task<IActionResult> AddExperience([FromRoute] Guid userId, [FromBody] Application.Dtos.ExperienceDto.Create experienceDto)
         {
@@ -65,15 +65,14 @@ namespace WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [RoleAuthorize("Admin", "Model")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer")]
         [CurrentUser]
-        public async Task<IActionResult> UpdateExperience([FromRoute] Guid userId, [FromBody] Application.Dtos.ExperienceDto.Update experienceDto)
+        public async Task<IActionResult> UpdateExperience([FromRoute] Guid userId, Guid experienceId, [FromBody] Application.Dtos.ExperienceDto.Update experienceDto)
         {
-            var existingExperience = await _experienceService.GetExperienceByUserId(userId);
+            var existingExperience = await _experienceService.GetExperienceById(experienceId);
             if (existingExperience is null) return NotFound();
-            existingExperience.UpdateEntity(experienceDto);
 
-            await _experienceService.UpdateExperience(existingExperience);
+            await _experienceService.UpdateExperience(existingExperience, experienceDto);
             return NoContent();
         }
 
@@ -85,14 +84,32 @@ namespace WebApi.Controllers
         [HttpDelete(ExperienceEndpoints.DeleteExperience)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [RoleAuthorize("Admin", "Model")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer")]
         [CurrentUser]
-        public async Task<IActionResult> DeleteExperience([FromRoute] Guid userId)
+        public async Task<IActionResult> DeleteExperience([FromRoute] Guid userId, Guid experienceId)
         {
             var existingExperience = await _experienceService.GetExperienceByUserId(userId);
             if (existingExperience is null) return NotFound();
-            await _experienceService.DeleteExperience(userId);
+            await _experienceService.DeleteExperience(experienceId);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Retrieves all experience entries for a specific user by their ID.
+        /// </summary>
+        /// <param name="userId"></param>
+        /// <returns></returns>
+        [HttpGet(ExperienceEndpoints.GetAllExperiencesByUserId)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer")]
+        [CurrentUser]
+        public async Task<IActionResult> GetAllByUserId([FromRoute] Guid userId)
+        {
+            var experiences = await _experienceService.GetAllExperiencesByUserId(userId);
+            if (experiences is null) return NotFound();
+            var experienceDtos = experiences.Select(e => e?.ToReadDto()).ToList();
+            return Ok(experienceDtos);
         }
 
 

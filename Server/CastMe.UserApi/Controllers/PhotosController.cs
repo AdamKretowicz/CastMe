@@ -62,14 +62,6 @@ namespace CastMe.Api.Controllers
         [CurrentUser]
         public async Task<IActionResult> Delete([FromRoute] Guid userId, [FromRoute] Guid photoId, CancellationToken ct)
         {
-            var currentUserId = User.Claims.FirstOrDefault(c => c.Type == "id")?.Value;
-            if (currentUserId is null)
-                return Forbid();
-
-            if (!User.IsInRole("Admin") && currentUserId != userId.ToString())
-                return Forbid();
-
-
             await _service.DeleteAsync(userId, photoId, ct);
             return NoContent();
         }
