@@ -30,7 +30,7 @@ const OrganizerDashboard = () => {
     title: "",
     description: "",
     location: "",
-    salary: "",
+    compensation: "",
     tags: "",
     roles: ["Model"],
     maxPlaces: "",
@@ -59,8 +59,9 @@ const OrganizerDashboard = () => {
     else if (formData.location.length > 100)
       newErrors.location = "Lokalizacja nie może być dłuższa niż 100 znaków";
 
-    if (formData.salary && formData.salary.length > 50)
-      newErrors.salary = "Wynagrodzenie nie może być dłuższe niż 50 znaków";
+    if (formData.compensation && formData.compensation.length > 50)
+      newErrors.compensation =
+        "Wynagrodzenie nie może być dłuższe niż 50 znaków";
 
     if (!formData.maxPlaces)
       newErrors.maxPlaces = "Liczba miejsc jest wymagana";
@@ -102,15 +103,23 @@ const OrganizerDashboard = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) return;
 
     const castingData = {
-      ...formData,
-      organizerId: currentUser.id,
-      maxPlaces: parseInt(formData.maxPlaces),
+      title: formData.title,
+      description: formData.description,
+      location: formData.location,
+      eventDate: new Date(formData.deadline).toISOString(),
+      requirements: "", // placeholder – można dodać pole do formularza
+      compensation: formData.compensation,
+      bannerUrl: "", // placeholder – można dodać upload bannera
+      roles: formData.roles.map((role) => ({
+        role,
+        capacity: parseInt(formData.maxPlaces, 10),
+      })),
       tags: formData.tags
         ? formData.tags
             .split(",")
@@ -119,14 +128,14 @@ const OrganizerDashboard = () => {
         : [],
     };
 
-    const result = createCasting(castingData);
+    const result = await createCasting(castingData);
 
     if (result.success) {
       setFormData({
         title: "",
         description: "",
         location: "",
-        salary: "",
+        compensation: "",
         tags: "",
         roles: ["Model"],
         maxPlaces: "",
@@ -134,6 +143,8 @@ const OrganizerDashboard = () => {
       });
       setShowCreateForm(false);
       alert("Casting został utworzony pomyślnie!");
+    } else {
+      alert("Błąd podczas tworzenia castingu");
     }
   };
 
@@ -248,10 +259,10 @@ const OrganizerDashboard = () => {
 
                   <Input
                     label="Wynagrodzenie"
-                    name="salary"
-                    value={formData.salary}
+                    name="compensation"
+                    value={formData.compensation}
                     onChange={handleChange}
-                    error={errors.salary}
+                    error={errors.compensation}
                     placeholder="500-800 PLN"
                   />
                 </div>
@@ -358,7 +369,7 @@ const OrganizerDashboard = () => {
                           </div>
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-1" />
-                            {casting.maxPlaces}
+                            {casting.roles?.[0]?.capacity || 0}
                           </div>
                         </div>
                         <div className="flex items-center justify-between">

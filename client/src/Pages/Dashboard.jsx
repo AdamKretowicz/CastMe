@@ -9,7 +9,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (currentUser) {
       console.log("🔑 Zalogowany użytkownik:", currentUser);
-      console.log("📌 Role użytkownika:", currentUser.roles);
+      console.log("📌 Role użytkownika:", currentUser.role);
     }
   }, [currentUser]);
 
@@ -25,7 +25,7 @@ const Dashboard = () => {
     );
   }
 
-  if (currentUser.roles?.some((r) => r.name === "Admin")) {
+  if (currentUser.role === "Admin") {
     return <OrganizerDashboard />;
   }
 
