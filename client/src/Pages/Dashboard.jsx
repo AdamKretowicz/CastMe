@@ -1,10 +1,17 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import ModelDashboard from "../components/Dashboard/ModelDashboard";
 import OrganizerDashboard from "../components/Dashboard/OrganizerDashboard";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
+
+  useEffect(() => {
+    if (currentUser) {
+      console.log("🔑 Zalogowany użytkownik:", currentUser);
+      console.log("📌 Role użytkownika:", currentUser.roles);
+    }
+  }, [currentUser]);
 
   if (!currentUser) {
     return (
@@ -18,8 +25,7 @@ const Dashboard = () => {
     );
   }
 
-  // Show organizer dashboard for organizers, model dashboard for everyone else
-  if (currentUser.role === "Admin") {
+  if (currentUser.roles?.some((r) => r.name === "Admin")) {
     return <OrganizerDashboard />;
   }
 

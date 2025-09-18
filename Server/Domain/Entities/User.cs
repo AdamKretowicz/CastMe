@@ -54,9 +54,9 @@ namespace CastMe.Domain.Entities
 
         public ICollection<CastingAssignment> Assignments { get; set; } = new List<CastingAssignment>();
 
-        //[Required]
-        //[AllowedValues(new object[] { true })]
-        //public bool AcceptedTerms { get; set; }
+        [Required]
+        [AllowedValues(new object[] { true })]
+        public bool AcceptedTerms { get; set; }
 
         public virtual ICollection<Experience> Experiences { get; set; } = new List<Experience>();
     }

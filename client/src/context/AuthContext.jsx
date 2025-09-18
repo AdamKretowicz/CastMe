@@ -13,8 +13,12 @@ export function useAuth() {
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [accessToken, setAccessToken] = useState(localStorage.getItem("accessToken"));
-  const [refreshToken, setRefreshToken] = useState(localStorage.getItem("refreshToken"));
+  const [accessToken, setAccessToken] = useState(
+    localStorage.getItem("accessToken")
+  );
+  const [refreshToken, setRefreshToken] = useState(
+    localStorage.getItem("refreshToken")
+  );
 
   // 🔑 Logowanie
   const login = async (userName, password) => {
@@ -23,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         method: "POST",
         body: JSON.stringify({ userName, password }),
       });
-
+      console.log("Login response:", res);
       setAccessToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       setCurrentUser(res.user);

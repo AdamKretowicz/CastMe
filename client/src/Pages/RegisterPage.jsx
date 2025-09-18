@@ -9,25 +9,25 @@ import { policy } from "../data/policy";
 const RegisterPage = () => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    UserName: "",
-    FirstName: "",
-    LastName: "",
-    Email: "",
-    Phone: "",
-    Password: "",
-    Country: "",
-    City: "",
-    Gender: 0,
-    DateOfBirth: "",
-    Height: 0,
-    Weight: 0,
-    HairColor: "",
-    ClothingSize: "",
-    Description: "",
-    RoleName: "",
+    UserName: "testName",
+    FirstName: "Johnny",
+    LastName: "Doe",
+    Email: "johnny.doe@example.com",
+    Phone: "+123456789",
+    Password: "password123",
+    Country: "USA",
+    City: "New York",
+    Gender: 1,
+    DateOfBirth: "2000-01-01",
+    Height: 180,
+    Weight: 75,
+    HairColor: "Brown",
+    ClothingSize: "M",
+    Description: "A passionate model.",
+    RoleName: "Model",
     Photos: [],
     AcceptTerms: false,
-    ConfirmPassword: "",
+    ConfirmPassword: "password123",
   });
 
   const [errors, setErrors] = useState({});
@@ -36,7 +36,6 @@ const RegisterPage = () => {
 
   const { register } = useAuth();
   const navigate = useNavigate();
-  const roles = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -376,12 +375,10 @@ const RegisterPage = () => {
                           onChange={handleChange}
                           className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62]"
                         >
-                          <option value="">Wybierz rolę</option>
-                          {roles.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
+                          <option value="Model">Model</option>
+                          <option value="Photographer">Fotograf</option>
+                          <option value="Designer">Projektant</option>
+                          <option value="Volunteer">Wolontariusz</option>
                         </select>
                         {errors.RoleName && (
                           <p className="text-red-500">{errors.RoleName}</p>
