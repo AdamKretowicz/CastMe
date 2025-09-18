@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useCasting } from "../../context/CastingContext";
+import { apiFetch } from "../../utils/api";
 import {
   Calendar,
   MapPin,
@@ -15,11 +15,50 @@ import Button from "../UI/Button";
 
 const ModelDashboard = () => {
   const { currentUser } = useAuth();
-  const { castings, applyToCasting, getUserApplications } = useCasting();
+  const [castings, setCastings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
+  // Zgłoszenia użytkownika z API
+  const [userApplications, setUserApplications] = useState([]);
 
-  const userApplications = getUserApplications(currentUser.id);
+  useEffect(() => {
+    const fetchCastings = async () => {
+      try {
+        const data = await apiFetch("/casting/casting");
+        setCastings(data);
+      } catch (err) {
+        setError("Błąd pobierania castingów");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCastings();
+  }, []);
+
+  // Pobierz zgłoszenia użytkownika z API
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchApplications = async () => {
+      try {
+        const data = await apiFetch(
+          `/casting/casting/participant/${currentUser.id}`
+        );
+        setUserApplications(data);
+        // DEBUG: wypisz currentUser.id i odpowiedź z backendu
+        console.log("currentUser.id:", currentUser.id);
+        console.log("userApplications (response):", data);
+      } catch (err) {
+        // Możesz dodać obsługę błędu jeśli chcesz
+      }
+    };
+    fetchApplications();
+  }, [currentUser]);
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("pl-PL");
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -60,28 +99,47 @@ const ModelDashboard = () => {
     }
   };
 
-  const handleApply = (castingId) => {
-    const result = applyToCasting(
-      castingId,
-      currentUser.id,
-      applicationMessage
-    );
-    if (result.success) {
+  // Obsługa zgłoszenia do castingu przez API
+  const handleApply = async (castingId) => {
+    try {
+      await apiFetch(
+        `/casting/casting/${castingId}/participant/${currentUser.id}`,
+        {
+          method: "POST",
+        }
+      );
+      // Po wysłaniu zgłoszenia odśwież listę zgłoszeń
+      const data = await apiFetch(
+        `/casting/casting/participant/${currentUser.id}`
+      );
+      setUserApplications(data);
       setSelectedCasting(null);
       setApplicationMessage("");
       alert("Zgłoszenie zostało wysłane!");
-    } else {
-      alert(result.error);
+    } catch (err) {
+      alert("Błąd wysyłania zgłoszenia");
     }
   };
 
+  // Sprawdzanie czy użytkownik już się zgłosił
   const hasApplied = (castingId) => {
-    return userApplications.some((app) => app.castingId === castingId);
+    return userApplications.some((app) => app.id === castingId);
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("pl-PL");
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Ładowanie castingów...
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

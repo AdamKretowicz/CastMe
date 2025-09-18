@@ -1,46 +1,46 @@
 import React, { createContext, useContext, useState } from "react";
-import {
-  castings as initialCastings,
-  applications as initialApplications,
-} from "../data/castings";
+import { apiFetch } from "../utils/api";
+// <- upewnij się, że ścieżka jest poprawna
 
 const CastingContext = createContext();
 
 export const useCasting = () => {
-  const context = useContext(CastingContext);
-  if (!context) {
-    throw new Error("useCasting must be used within a CastingProvider");
-  }
-  return context;
+  const ctx = useContext(CastingContext);
+  if (!ctx) throw new Error("useCasting must be used within a CastingProvider");
+  return ctx;
 };
 
 export const CastingProvider = ({ children }) => {
-  const [castings, setCastings] = useState(initialCastings);
-  const [applications, setApplications] = useState(initialApplications);
+  const [castings, setCastings] = useState([]);
+  const [applications, setApplications] = useState([]);
 
-  const createCasting = (castingData) => {
-    const newCasting = {
-      ...castingData,
-      id: castings.length + 1,
-      status: "active",
-      createdAt: new Date(),
-      deadline: new Date(castingData.deadline),
-    };
+  /**
+   * Tworzenie nowego castingu (API POST)
+   */
+  const createCasting = async (castingData) => {
+    try {
+      const newCasting = await apiFetch("/casting/casting", {
+        method: "POST",
+        body: JSON.stringify(castingData),
+      });
 
-    setCastings((prev) => [...prev, newCasting]);
-    return { success: true, casting: newCasting };
+      setCastings((prev) => [...prev, newCasting]); // odśwież listę
+
+      return { success: true, casting: newCasting };
+    } catch (err) {
+      console.error("Błąd podczas tworzenia castingu:", err);
+      return { success: false, error: err.message };
+    }
   };
 
+  // Etap 2 i 3 (apply, statusy) na razie lokalnie
   const applyToCasting = (castingId, userId, message = "") => {
-    // Check if user already applied
-    const existingApplication = applications.find(
-      (app) => app.castingId === castingId && app.userId === userId
+    const exists = applications.find(
+      (a) => a.castingId === castingId && a.userId === userId
     );
-
-    if (existingApplication) {
+    if (exists) {
       return { success: false, error: "Już zgłosiłeś się do tego castingu" };
     }
-
     const newApplication = {
       id: applications.length + 1,
       castingId,
@@ -49,24 +49,21 @@ export const CastingProvider = ({ children }) => {
       appliedAt: new Date(),
       message,
     };
-
-    setApplications((prev) => [...prev, newApplication]);
+    setApplications((p) => [...p, newApplication]);
     return { success: true, application: newApplication };
   };
 
   const updateApplicationStatus = (applicationId, status) => {
     setApplications((prev) =>
-      prev.map((app) => (app.id === applicationId ? { ...app, status } : app))
+      prev.map((a) => (a.id === applicationId ? { ...a, status } : a))
     );
   };
 
-  const getUserApplications = (userId) => {
-    return applications.filter((app) => app.userId === userId);
-  };
+  const getUserApplications = (userId) =>
+    applications.filter((a) => a.userId === userId);
 
-  const getCastingApplications = (castingId) => {
-    return applications.filter((app) => app.castingId === castingId);
-  };
+  const getCastingApplications = (castingId) =>
+    applications.filter((a) => a.castingId === castingId);
 
   const value = {
     castings,
