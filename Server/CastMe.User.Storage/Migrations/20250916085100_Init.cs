@@ -135,6 +135,35 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Favourites",
+                schema: "User",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrganizerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Favourites", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Favourites_Users_ModelId",
+                        column: x => x.ModelId,
+                        principalSchema: "User",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Favourites_Users_OrganizerId",
+                        column: x => x.OrganizerId,
+                        principalSchema: "User",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.NoAction);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CastingAssignments",
                 schema: "Casting",
                 columns: table => new
@@ -268,6 +297,18 @@ namespace Infrastructure.Migrations
                 schema: "User",
                 table: "Users",
                 column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Favourites_ModelId",
+                schema: "User",
+                table: "Favourites",
+                column: "ModelId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Favourites_OrganizerId",
+                schema: "User",
+                table: "Favourites",
+                column: "OrganizerId");
         }
 
         /// <inheritdoc />
@@ -295,6 +336,10 @@ namespace Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "Castings",
                 schema: "Casting");
+
+            migrationBuilder.DropTable(
+                name: "Favourites",
+                schema: "User");
 
             migrationBuilder.DropTable(
                 name: "Users",

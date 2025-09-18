@@ -93,7 +93,7 @@ namespace Infrastructure.Migrations
         },
         {
             user2Id,
-            "alex_photographer",
+            "alex_model",
             BCrypt.Net.BCrypt.HashPassword("password123"),
             "Alex",
             "Johnson",
@@ -109,7 +109,7 @@ namespace Infrastructure.Migrations
             "Brown",
             "M",
             1, // Active
-            photographerRoleId,
+            modelRoleId,
             true,
         },
         {
