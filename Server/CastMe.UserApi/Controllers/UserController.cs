@@ -90,25 +90,28 @@ namespace CastMe.UserApi.Controllers
         }
 
         /// <summary>Get user by Id.</summary>
-        [HttpGet("/GetAll/{id:guid}")]
+        [HttpGet("/GetAll/{userId:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         [CurrentUser]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(Guid userId)
         {
+            var id = userId;
             var user = await _userService.GetById(id);
             if (user is null) return NotFound();
             return Ok(user.ToReadDto());
         }
 
         /// <summary>Get Active user by Id.</summary>
-        [HttpGet("/GetActive/{id:guid}")]
+        [HttpGet("/GetActive/{userId:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
-        public async Task<IActionResult> GetActiveById(Guid id)
+        public async Task<IActionResult> GetActiveById(Guid userId)
         {
+            var id = userId;
+
             var user = await _userService.GetActiveById(id);
             if (user is null) return NotFound();
             return Ok(user.ToReadDto());
@@ -145,34 +148,37 @@ namespace CastMe.UserApi.Controllers
         }
 
         /// <summary>Update existing user (full replace).</summary>
-        [HttpPut("{id:guid}")]
+        [HttpPut("{userId:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         [CurrentUser]
-        public async Task<IActionResult> Edit(Guid id, [FromBody] UserDto.Update dto)
+        public async Task<IActionResult> Edit(Guid userId, [FromBody] UserDto.Update dto)
         {
+
+            var id = userId;
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var existingUser = await _userService.GetById(id);
             if (existingUser is null) return NotFound();
 
-            existingUser.UpdateEntity(dto);
-            await _userService.Update(existingUser);
+            
+            var updatedUser = await _userService.Update(existingUser, dto);
 
-            return Ok(existingUser.ToReadDto());
+            return Ok(updatedUser.ToReadDto());
         }
 
         /// <summary>Partially update user (JSON Patch).</summary>
-        [HttpPatch("{id:guid}")]
+        [HttpPatch("{userId:guid}")]
         [ProducesResponseType(typeof(UserDto.Read), 200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         [CurrentUser]
-        public async Task<IActionResult> Patch(Guid id, [FromBody] JsonPatchDocument<UserDto.Update> patchDoc)
+        public async Task<IActionResult> Patch(Guid userId, [FromBody] JsonPatchDocument<UserDto.Update> patchDoc)
         {
+            var id = userId;
             if (patchDoc is null) return BadRequest();
 
             var user = await _userService.GetById(id);
@@ -201,19 +207,20 @@ namespace CastMe.UserApi.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             user.UpdateEntity(updateDto);
-            await _userService.Update(user);
+            await _userService.Update(user, updateDto);
 
             return Ok(user.ToReadDto());
         }
 
         /// <summary>Delete user by Id.</summary>
-        [HttpDelete("{id:guid}")]
+        [HttpDelete("{userId:guid}")]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         [CurrentUser]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid userId)
         {
+            var id = userId;
             var user = await _userService.GetById(id);
             if (user is null) return NotFound();
 

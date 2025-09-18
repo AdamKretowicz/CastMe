@@ -2,6 +2,7 @@
 using Application.Interfaces;
 using CastMe.Domain.Entities;
 using CastMe.User.CrossCutting.DTOs;
+using CastMe.UserApi.Mappers;
 using Domain.Entities;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
@@ -39,10 +40,13 @@ namespace CastMe.UserApi.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task Update(Domain.Entities.User entity)
+        public async Task<Domain.Entities.User> Update(Domain.Entities.User entity, UserDto.Update updateUser )
         {
-            _context.Users.Update(entity);
+            entity.UpdateEntity(updateUser);
+
+            //_context.Users.Update(entity);
             await _context.SaveChangesAsync();
+            return entity;
         }
 
         public async Task Delete(Guid id)
