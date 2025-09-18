@@ -1,131 +1,164 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useCasting } from "../../context/CastingContext";
 import {
   Plus,
-  Edit,
   Users,
-  Calendar,
   MapPin,
   CheckCircle,
   XCircle,
   AlertCircle,
+  X,
 } from "lucide-react";
 import Card from "../UI/Card";
 import Button from "../UI/Button";
 import Input from "../UI/Input";
 
+const ALL_ROLES = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
+
+const roleMap = {
+  Model: "model",
+  Fotograf: "photographer",
+  Projektant: "designer",
+  Wolontariusz: "volunteer",
+};
+
 const OrganizerDashboard = () => {
   const { currentUser } = useAuth();
-  const {
-    castings,
-    applications,
-    createCasting,
-    updateApplicationStatus,
-    getCastingApplications,
-  } = useCasting();
+  const { castings, createCasting, getCastingApplications } = useCasting();
+
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCasting, setSelectedCasting] = useState(null);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    requirements: "",
     location: "",
-    compensation: "",
+    compensation: "", // opcjonalne – pokaż po kliknięciu plusa
     tags: "",
-    roles: ["Model"],
-    maxPlaces: "",
+    roles: [{ role: "Model", capacity: "" }], // Model zawsze
     deadline: "",
+    bannerFile: null, // 1 plik (na razie tylko UI)
   });
+
+  const [showCompensation, setShowCompensation] = useState(false);
   const [errors, setErrors] = useState({});
 
   const organizerCastings = castings.filter(
-    (casting) => casting.organizerId === currentUser.id
+    (c) => c.organizerId === currentUser.id
   );
 
-  const availableRoles = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
+  const selectedRoleNames = useMemo(
+    () => formData.roles.map((r) => r.role).filter(Boolean),
+    [formData.roles]
+  );
+
+  // role, które można jeszcze dodać (bez Modela – ten jest stały)
+  const availableExtraRoles = useMemo(
+    () =>
+      ALL_ROLES.filter((r) => r !== "Model" && !selectedRoleNames.includes(r)),
+    [selectedRoleNames]
+  );
 
   const validateForm = () => {
-    const newErrors = {};
+    const e = {};
+    if (!formData.title) e.title = "Tytuł jest wymagany";
+    if (!formData.description) e.description = "Opis jest wymagany";
+    if (!formData.location) e.location = "Lokalizacja jest wymagana";
+    if (!formData.deadline) e.deadline = "Termin jest wymagany";
+    if (!formData.requirements) e.requirements = "Wymagania są wymagane";
 
-    if (!formData.title) newErrors.title = "Tytuł jest wymagany";
-    else if (formData.title.length > 100)
-      newErrors.title = "Tytuł nie może być dłuższy niż 100 znaków";
+    // każda rola musi mieć capacity > 0
+    formData.roles.forEach((r, idx) => {
+      if (!r.capacity || isNaN(r.capacity) || Number(r.capacity) <= 0) {
+        e[`role-${idx}`] = "Podaj poprawną liczbę miejsc";
+      }
+    });
 
-    if (!formData.description) newErrors.description = "Opis jest wymagany";
-    else if (formData.description.length > 1000)
-      newErrors.description = "Opis nie może być dłuższy niż 1000 znaków";
+    formData.roles.forEach((r, i) => {
+      if (!r.role) {
+        e[`role-${i}`] = "Wybierz rolę";
+      }
+      if (!r.capacity || isNaN(r.capacity) || r.capacity <= 0) {
+        e[`role-${i}`] = "Podaj poprawną liczbę miejsc";
+      }
+    });
 
-    if (!formData.location) newErrors.location = "Lokalizacja jest wymagana";
-    else if (formData.location.length > 100)
-      newErrors.location = "Lokalizacja nie może być dłuższa niż 100 znaków";
+    // compensation opcjonalne — ale jeśli jest, max 50 znaków
+    if (
+      showCompensation &&
+      formData.compensation &&
+      formData.compensation.length > 50
+    ) {
+      e.compensation = "Wynagrodzenie nie może być dłuższe niż 50 znaków";
+    }
 
-    if (formData.compensation && formData.compensation.length > 50)
-      newErrors.compensation =
-        "Wynagrodzenie nie może być dłuższe niż 50 znaków";
-
-    if (!formData.maxPlaces)
-      newErrors.maxPlaces = "Liczba miejsc jest wymagana";
-    else if (isNaN(formData.maxPlaces) || formData.maxPlaces <= 0)
-      newErrors.maxPlaces = "Liczba miejsc musi być większa od 0";
-
-    if (!formData.deadline) newErrors.deadline = "Termin jest wymagany";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const handleChange = (e) => {
+  const handleBasicChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
+    setFormData((p) => ({ ...p, [name]: value }));
+    if (errors[name]) setErrors((p) => ({ ...p, [name]: "" }));
   };
 
-  const handleRoleChange = (role, checked) => {
-    if (checked) {
-      setFormData((prev) => ({
-        ...prev,
-        roles: [...prev.roles, role],
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        roles: prev.roles.filter((r) => r !== role),
-      }));
-    }
+  const handleRoleFieldChange = (index, field, value) => {
+    setFormData((p) => {
+      const roles = [...p.roles];
+      roles[index] = { ...roles[index], [field]: value };
+      return { ...p, roles };
+    });
+    if (errors[`role-${index}`])
+      setErrors((p) => ({ ...p, [`role-${index}`]: "" }));
+  };
+
+  const addEmptyRoleRow = () => {
+    setFormData((p) => ({
+      ...p,
+      roles: [...p.roles, { role: "", capacity: "" }],
+    }));
+  };
+
+  const removeRoleRow = (index) => {
+    setFormData((p) => ({
+      ...p,
+      roles: p.roles.filter((_, i) => i !== index),
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
+
+    // ustalmy godzinę na 12:00, żeby uniknąć niespodzianek TZ
+    const event = new Date(formData.deadline);
+    event.setHours(12, 0, 0, 0);
 
     const castingData = {
       title: formData.title,
       description: formData.description,
       location: formData.location,
-      eventDate: new Date(formData.deadline).toISOString(),
-      requirements: "", // placeholder – można dodać pole do formularza
-      compensation: formData.compensation,
-      bannerUrl: "", // placeholder – można dodać upload bannera
-      roles: formData.roles.map((role) => ({
-        role,
-        capacity: parseInt(formData.maxPlaces, 10),
-      })),
+      eventDate: event.toISOString(),
+      requirements: formData.requirements,
+      compensation: showCompensation ? formData.compensation : "",
+      bannerUrl: formData.bannerFile
+        ? URL.createObjectURL(formData.bannerFile)
+        : "",
+      roles: formData.roles
+        .filter((r) => r.role) // ignoruj puste wiersze
+        .map((r) => ({
+          role: roleMap[r.role] || r.role,
+          capacity: parseInt(r.capacity, 10),
+        })),
       tags: formData.tags
         ? formData.tags
             .split(",")
-            .map((tag) => tag.trim())
+            .map((t) => t.trim())
             .slice(0, 5)
         : [],
+      organizerId: currentUser.id,
     };
 
     const result = await createCasting(castingData);
@@ -137,24 +170,17 @@ const OrganizerDashboard = () => {
         location: "",
         compensation: "",
         tags: "",
-        roles: ["Model"],
-        maxPlaces: "",
+        roles: [{ role: "Model", capacity: "" }],
         deadline: "",
+        bannerFile: null,
       });
+      setShowCompensation(false);
       setShowCreateForm(false);
       alert("Casting został utworzony pomyślnie!");
     } else {
       alert("Błąd podczas tworzenia castingu");
+      console.error(result.error);
     }
-  };
-
-  const handleApplicationAction = (applicationId, action) => {
-    updateApplicationStatus(applicationId, action);
-    alert(
-      `Zgłoszenie zostało ${
-        action === "accepted" ? "zaakceptowane" : "odrzucone"
-      }`
-    );
   };
 
   const getStatusColor = (status) => {
@@ -183,9 +209,7 @@ const OrganizerDashboard = () => {
     }
   };
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("pl-PL");
-  };
+  const formatDate = (d) => new Date(d).toLocaleDateString("pl-PL");
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,17 +238,23 @@ const OrganizerDashboard = () => {
               </h2>
             </Card.Header>
             <Card.Content>
-              <form onSubmit={handleSubmit} className="space-y-6">
+              {/* zwężenie formularza */}
+              <form
+                onSubmit={handleSubmit}
+                className="space-y-6 max-w-3xl mx-auto"
+              >
+                {/* Tytuł (full width) */}
                 <Input
                   label="Tytuł"
                   name="title"
                   value={formData.title}
-                  onChange={handleChange}
+                  onChange={handleBasicChange}
                   error={errors.title}
                   required
                   placeholder="Sesja zdjęciowa dla marki odzieżowej"
                 />
 
+                {/* Opis (full width) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Opis <span className="text-red-500">*</span>
@@ -232,7 +262,7 @@ const OrganizerDashboard = () => {
                   <textarea
                     name="description"
                     value={formData.description}
-                    onChange={handleChange}
+                    onChange={handleBasicChange}
                     className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
                       errors.description ? "border-red-300" : "border-gray-300"
                     }`}
@@ -246,78 +276,286 @@ const OrganizerDashboard = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Lokalizacja"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    error={errors.location}
-                    required
-                    placeholder="Warszawa"
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Wymagania <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    name="requirements"
+                    value={formData.requirements}
+                    onChange={handleBasicChange}
+                    className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
+                      errors.requirements ? "border-red-300" : "border-gray-300"
+                    }`}
+                    rows="3"
+                    placeholder="Napisz, jakie są wymagania wobec uczestników..."
                   />
-
-                  <Input
-                    label="Wynagrodzenie"
-                    name="compensation"
-                    value={formData.compensation}
-                    onChange={handleChange}
-                    error={errors.compensation}
-                    placeholder="500-800 PLN"
-                  />
+                  {errors.requirements && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.requirements}
+                    </p>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Maksymalna liczba miejsc"
-                    name="maxPlaces"
-                    type="number"
-                    value={formData.maxPlaces}
-                    onChange={handleChange}
-                    error={errors.maxPlaces}
-                    required
-                    placeholder="4"
-                  />
+                {/* Wiersz: Lokalizacja (węższa) + plusik Wynagrodzenie / pole Wynagrodzenie */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                  <div className="md:col-span-7">
+                    <Input
+                      label="Lokalizacja"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleBasicChange}
+                      error={errors.location}
+                      required
+                      placeholder="Warszawa"
+                    />
+                  </div>
 
-                  <Input
-                    label="Termin zgłoszeń"
-                    name="deadline"
-                    type="date"
-                    value={formData.deadline}
-                    onChange={handleChange}
-                    error={errors.deadline}
-                    required
-                  />
+                  <div className="md:col-span-5">
+                    {!showCompensation ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCompensation(true)}
+                        className="inline-flex items-center text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Dodaj wynagrodzenie
+                      </button>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Wynagrodzenie (opcjonalnie)
+                        </label>
+                        <div className="grid grid-cols-12 items-center gap-3">
+                          <div className="col-span-11">
+                            <input
+                              type="text"
+                              name="compensation"
+                              value={formData.compensation}
+                              onChange={handleBasicChange}
+                              placeholder="np. 500–800 PLN"
+                              className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
+                                errors.compensation
+                                  ? "border-red-300"
+                                  : "border-gray-300"
+                              }`}
+                            />
+                          </div>
+                          <div className="col-span-1 flex justify-center">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowCompensation(false);
+                                setFormData((p) => ({
+                                  ...p,
+                                  compensation: "",
+                                }));
+                              }}
+                              className="self-center text-gray-400 hover:text-red-500"
+                              title="Usuń wynagrodzenie"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                        {errors.compensation && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {errors.compensation}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <Input
-                  label="Tagi (oddzielone przecinkami, max 5)"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleChange}
-                  placeholder="fashion, studio, outdoor"
-                />
-
+                {/* Role */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
                     Poszukiwane role
                   </label>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {availableRoles.map((role) => (
-                      <label key={role} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.roles.includes(role)}
-                          onChange={(e) =>
-                            handleRoleChange(role, e.target.checked)
-                          }
-                          className="rounded border-gray-300 text-[#EA1A62] focus:ring-[#EA1A62]"
-                        />
-                        <span className="text-sm text-gray-700">{role}</span>
-                      </label>
-                    ))}
+
+                  {/* Model (stały) */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3">
+                    <div className="md:col-span-6">
+                      <input
+                        type="text"
+                        value="Model"
+                        disabled
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm bg-gray-100 text-gray-700"
+                      />
+                    </div>
+                    <div className="md:col-span-5">
+                      <input
+                        type="number"
+                        placeholder="Ilość"
+                        value={formData.roles[0].capacity}
+                        onChange={(e) =>
+                          handleRoleFieldChange(0, "capacity", e.target.value)
+                        }
+                        className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
+                          errors["role-0"]
+                            ? "border-red-300"
+                            : "border-gray-300"
+                        }`}
+                      />
+                      {errors["role-0"] && (
+                        <p className="text-sm text-red-600 mt-1">
+                          {errors["role-0"]}
+                        </p>
+                      )}
+                    </div>
+                    <div className="md:col-span-1" />
                   </div>
+
+                  {/* Dodatkowe role */}
+                  {formData.roles.slice(1).map((r, idx) => {
+                    const i = idx + 1; // realny index w roles
+                    // opcje dla tego selecta: rola aktualnie wybrana + wszystkie jeszcze nieużyte
+                    const options = ALL_ROLES.filter(
+                      (role) =>
+                        role !== "Model" &&
+                        (!selectedRoleNames.includes(role) || role === r.role)
+                    );
+
+                    return (
+                      <div
+                        key={`role-row-${i}`}
+                        className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mb-3"
+                      >
+                        <div className="md:col-span-6">
+                          <select
+                            value={r.role}
+                            onChange={(e) =>
+                              handleRoleFieldChange(i, "role", e.target.value)
+                            }
+                            className="block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] border-gray-300 bg-white"
+                          >
+                            <option value="" disabled>
+                              Wybierz rolę
+                            </option>
+                            {options.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="md:col-span-5">
+                          <input
+                            type="number"
+                            placeholder="Ilość"
+                            value={r.capacity}
+                            onChange={(e) =>
+                              handleRoleFieldChange(
+                                i,
+                                "capacity",
+                                e.target.value
+                              )
+                            }
+                            className={`block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62] ${
+                              errors[`role-${i}`]
+                                ? "border-red-300"
+                                : "border-gray-300"
+                            }`}
+                          />
+                          {errors[`role-${i}`] && (
+                            <p className="text-sm text-red-600 mt-1">
+                              {errors[`role-${i}`]}
+                            </p>
+                          )}
+                        </div>
+                        <div className="md:col-span-1 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => removeRoleRow(i)}
+                            className="text-gray-400 hover:text-red-500 text-lg"
+                            title="Usuń rolę"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Plusik dodający kolejną rolę */}
+                  {availableExtraRoles.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={addEmptyRoleRow}
+                      className="inline-flex items-center text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Dodaj rolę
+                    </button>
+                  )}
                 </div>
+
+                {/* Termin */}
+                <Input
+                  label="Termin zgłoszeń"
+                  name="deadline"
+                  type="date"
+                  value={formData.deadline}
+                  onChange={handleBasicChange}
+                  error={errors.deadline}
+                  required
+                />
+
+                {/* Banner – styl jak upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Banner castingu
+                  </label>
+
+                  {!formData.bannerFile ? (
+                    <label className="flex items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#EA1A62]">
+                      <span className="text-gray-500">
+                        Kliknij, aby dodać banner
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            setFormData((prev) => ({
+                              ...prev,
+                              bannerFile: file,
+                            }));
+                          }
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <div className="relative w-full h-40 border rounded-lg overflow-hidden bg-gray-50">
+                      <img
+                        src={URL.createObjectURL(formData.bannerFile)}
+                        alt="Podgląd bannera"
+                        className="object-contain w-full h-full"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({ ...prev, bannerFile: null }))
+                        }
+                        className="absolute top-2 right-2 bg-[#EA1A62] text-white rounded-full p-1 hover:bg-[#c7154f]"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tagi */}
+                <Input
+                  label="Tagi (oddzielone przecinkami, max 5)"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleBasicChange}
+                  placeholder="fashion, studio, outdoor"
+                />
 
                 <div className="flex space-x-3">
                   <Button type="submit">Utwórz casting</Button>
@@ -333,7 +571,7 @@ const OrganizerDashboard = () => {
           </Card>
         )}
 
-        {/* My Castings */}
+        {/* Lista castingów i zgłoszeń – bez zmian funkcjonalnych */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <Card>
@@ -349,32 +587,33 @@ const OrganizerDashboard = () => {
                   </p>
                 ) : (
                   <div className="space-y-4">
-                    {organizerCastings.map((casting) => (
+                    {organizerCastings.map((c) => (
                       <div
-                        key={casting.id}
+                        key={c.id}
                         className={`border border-gray-200 rounded-lg p-4 cursor-pointer transition-colors ${
-                          selectedCasting?.id === casting.id
+                          selectedCasting?.id === c.id
                             ? "border-[#EA1A62] bg-pink-50"
                             : "hover:bg-gray-50"
                         }`}
-                        onClick={() => setSelectedCasting(casting)}
+                        onClick={() => setSelectedCasting(c)}
                       >
                         <h3 className="font-medium text-gray-900 mb-2">
-                          {casting.title}
+                          {c.title}
                         </h3>
                         <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
                           <div className="flex items-center">
                             <MapPin className="w-4 h-4 mr-1" />
-                            {casting.location}
+                            {c.location}
                           </div>
                           <div className="flex items-center">
                             <Users className="w-4 h-4 mr-1" />
-                            {casting.roles?.[0]?.capacity || 0}
+                            {c.roles?.[0]?.capacity || 0}
                           </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-gray-500">
-                            Utworzono: {formatDate(casting.createdAt)}
+                            Utworzono:{" "}
+                            {c.createdAt ? formatDate(c.createdAt) : "-"}
                           </p>
                           <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                             Aktywny
@@ -388,7 +627,6 @@ const OrganizerDashboard = () => {
             </Card>
           </div>
 
-          {/* Applications for Selected Casting */}
           <div>
             <Card>
               <Card.Header>
@@ -408,7 +646,6 @@ const OrganizerDashboard = () => {
                     const castingApplications = getCastingApplications(
                       selectedCasting.id
                     );
-
                     return castingApplications.length === 0 ? (
                       <p className="text-gray-500 text-center py-4">
                         Brak zgłoszeń do tego castingu
@@ -431,7 +668,9 @@ const OrganizerDashboard = () => {
                                   </p>
                                   <p className="text-sm text-gray-500">
                                     Zgłoszono:{" "}
-                                    {formatDate(application.appliedAt)}
+                                    {new Date(
+                                      application.appliedAt
+                                    ).toLocaleDateString("pl-PL")}
                                   </p>
                                 </div>
                               </div>
@@ -450,42 +689,6 @@ const OrganizerDashboard = () => {
                                 </span>
                               </div>
                             </div>
-
-                            {application.message && (
-                              <div className="mb-3 p-3 bg-gray-50 rounded-lg">
-                                <p className="text-sm text-gray-700">
-                                  {application.message}
-                                </p>
-                              </div>
-                            )}
-
-                            {application.status === "pending" && (
-                              <div className="flex space-x-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() =>
-                                    handleApplicationAction(
-                                      application.id,
-                                      "accepted"
-                                    )
-                                  }
-                                >
-                                  Akceptuj
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleApplicationAction(
-                                      application.id,
-                                      "rejected"
-                                    )
-                                  }
-                                >
-                                  Odrzuć
-                                </Button>
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
