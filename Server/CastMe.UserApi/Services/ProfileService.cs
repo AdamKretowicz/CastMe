@@ -25,7 +25,7 @@ namespace WebApi.Services
                 .AsNoTracking()
                 .Include(u => u.Experiences)
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return null;
 
             IReadOnlyList<Application.Dtos.Photo.PhotoDto> photos = await _photoService.GetUserPhotosAsync(userId);
