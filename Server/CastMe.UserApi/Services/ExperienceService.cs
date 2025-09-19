@@ -1,4 +1,6 @@
-﻿using Application.Interfaces;
+﻿using Application.Dtos;
+using Application.Interfaces;
+using Application.Mapper;
 using Domain.Entities;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
@@ -33,16 +35,28 @@ namespace WebApi.Services
             return true;
         }
 
+        public async Task<Experience?> GetExperienceById(Guid experienceId)
+        {
+            return await _context.Experiences.Include(e => e.User).FirstOrDefaultAsync(e => e.Id == experienceId);
+        }
+
         public async Task<Experience?> GetExperienceByUserId(Guid userId)
         {
-            Experience? experience = await _context.Experiences.Include(e => e.User).FirstOrDefaultAsync(e => e.UserId == userId);
+            var experience = await _context.Experiences.Include(e => e.User).FirstOrDefaultAsync(e => e.UserId == userId);
 
             return experience;
         }
 
-        public async Task UpdateExperience(Experience experience)
+        public async Task<List<Experience?>> GetAllExperiencesByUserId(Guid userId)
         {
-            _context.Update(experience);
+            var experience = await _context.Experiences.Include(e => e.User).Where(e => e.UserId == userId).DefaultIfEmpty().ToListAsync();
+
+            return experience;
+        }
+
+        public async Task UpdateExperience(Experience experience, ExperienceDto.Update updateExperience)
+        {
+            experience.UpdateEntity(updateExperience);
             await _context.SaveChangesAsync();
         }
     }

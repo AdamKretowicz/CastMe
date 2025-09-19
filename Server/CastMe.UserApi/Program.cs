@@ -135,7 +135,9 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IUserFilterRepository, UserFilterRepository>();
-builder.Services.AddScoped<IExperienceService, ExperienceService>();
+builder.Services.AddTransient<IExperienceService, ExperienceService>();
+builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<FavouriteService>();
 
 
 
@@ -191,7 +193,11 @@ if (app.Environment.IsDevelopment())
         await next.Invoke();
     });
 }
-app.UseCors();
+app.UseCors(builder => builder
+    .WithOrigins("http://localhost:5173")
+    .AllowAnyMethod()
+    .AllowAnyHeader()
+    .AllowCredentials());
 
 app.UseAuthentication();   // WAŻNE: przed UseAuthorization
 app.UseAuthorization();

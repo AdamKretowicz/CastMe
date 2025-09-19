@@ -2,10 +2,12 @@
 {
     public static class ExperienceEndpoints
     {
+        public const string basePath = "/experience";
 
-        public const string GetExperiencesByUserId = "/{userId}";
-        public const string AddExperience = "/{userId}/add";
-        public const string UpdateExperience = "/{userId}/update";
-        public const string DeleteExperience = "/{userId}/delete/{experienceId}";
+        public const string GetExperiencesByUserId = basePath + "/{userId}";
+        public const string GetAllExperiencesByUserId = basePath + "all/{userId}";
+        public const string AddExperience = basePath + "/{userId}/add";
+        public const string UpdateExperience = basePath + "/{userId}/update/{experienceId}";
+        public const string DeleteExperience = basePath + "/{userId}/delete/{experienceId}";
     }
 }

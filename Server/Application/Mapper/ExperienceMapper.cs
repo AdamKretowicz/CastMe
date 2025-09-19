@@ -21,10 +21,10 @@ namespace Application.Mapper
                 ProjectName = experience.ProjectName,
                 Role = experience.Role,
                 Description = experience.Description,
-                StartDate = experience.StartDate,
-                EndDate = experience.EndDate,
+                StartDate = experience.StartDate.Date,
+                EndDate = experience.EndDate?.Date,
                 Link = experience.Link,
-                CreatedAt = experience.CreatedAt
+                CreatedAt = experience.CreatedAt.Date
             };
         }
         //CREATE DTO -> ENTITY
@@ -40,7 +40,7 @@ namespace Application.Mapper
                 StartDate = dto.StartDate,
                 EndDate = dto.EndDate,
                 Link = dto.Link,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow.Date,
             };
         }
         //UPDATE DTO -> ENTITY
