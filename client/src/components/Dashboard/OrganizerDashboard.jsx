@@ -63,35 +63,72 @@ const OrganizerDashboard = () => {
 
   const validateForm = () => {
     const e = {};
-    if (!formData.title) e.title = "Tytuł jest wymagany";
-    if (!formData.description) e.description = "Opis jest wymagany";
-    if (!formData.location) e.location = "Lokalizacja jest wymagana";
-    if (!formData.deadline) e.deadline = "Termin jest wymagany";
-    if (!formData.requirements) e.requirements = "Wymagania są wymagane";
 
-    // każda rola musi mieć capacity > 0
-    formData.roles.forEach((r, idx) => {
-      if (!r.capacity || isNaN(r.capacity) || Number(r.capacity) <= 0) {
-        e[`role-${idx}`] = "Podaj poprawną liczbę miejsc";
-      }
-    });
+    // Title: min 5, max 100
+    if (!formData.title) {
+      e.title = "Tytuł jest wymagany";
+    } else if (formData.title.length < 5 || formData.title.length > 100) {
+      e.title = "Tytuł musi mieć od 5 do 100 znaków";
+    }
 
+    // Description: min 20, max 2000
+    if (!formData.description) {
+      e.description = "Opis jest wymagany";
+    } else if (
+      formData.description.length < 20 ||
+      formData.description.length > 2000
+    ) {
+      e.description = "Opis musi mieć od 20 do 2000 znaków";
+    }
+
+    // Location: min 2, max 100
+    if (!formData.location) {
+      e.location = "Lokalizacja jest wymagana";
+    } else if (formData.location.length < 2 || formData.location.length > 100) {
+      e.location = "Lokalizacja musi mieć od 2 do 100 znaków";
+    }
+
+    // Deadline / eventDate
+    if (!formData.deadline) {
+      e.deadline = "Termin jest wymagany";
+    }
+
+    // Requirements: max 1000
+    if (!formData.requirements) {
+      e.requirements = "Wymagania są wymagane";
+    } else if (formData.requirements.length > 1000) {
+      e.requirements = "Wymagania nie mogą przekraczać 1000 znaków";
+    }
+
+    // Compensation: optional, max 100
+    if (
+      showCompensation &&
+      formData.compensation &&
+      formData.compensation.length > 100
+    ) {
+      e.compensation = "Wynagrodzenie nie może być dłuższe niż 100 znaków";
+    }
+
+    // Banner: max 1 file – masz już to w UI, walidacja dodatkowa:
+    if (formData.bannerFile && formData.bannerFile.length > 1) {
+      e.bannerFile = "Możesz dodać tylko jeden plik";
+    }
+
+    // Roles
     formData.roles.forEach((r, i) => {
       if (!r.role) {
         e[`role-${i}`] = "Wybierz rolę";
-      }
-      if (!r.capacity || isNaN(r.capacity) || r.capacity <= 0) {
+      } else if (!r.capacity || isNaN(r.capacity) || Number(r.capacity) <= 0) {
         e[`role-${i}`] = "Podaj poprawną liczbę miejsc";
       }
     });
 
-    // compensation opcjonalne — ale jeśli jest, max 50 znaków
-    if (
-      showCompensation &&
-      formData.compensation &&
-      formData.compensation.length > 50
-    ) {
-      e.compensation = "Wynagrodzenie nie może być dłuższe niż 50 znaków";
+    // Tags: max 5
+    if (formData.tags) {
+      const tagList = formData.tags.split(",").map((t) => t.trim());
+      if (tagList.length > 5) {
+        e.tags = "Możesz dodać maksymalnie 5 tagów";
+      }
     }
 
     setErrors(e);
@@ -115,10 +152,13 @@ const OrganizerDashboard = () => {
   };
 
   const addEmptyRoleRow = () => {
-    setFormData((p) => ({
-      ...p,
-      roles: [...p.roles, { role: "", capacity: "" }],
-    }));
+    setFormData((p) => {
+      if (p.roles.length >= ALL_ROLES.length) return p; // limit
+      return {
+        ...p,
+        roles: [...p.roles, { role: "", capacity: "" }],
+      };
+    });
   };
 
   const removeRoleRow = (index) => {
@@ -129,6 +169,7 @@ const OrganizerDashboard = () => {
   };
 
   const handleSubmit = async (e) => {
+    console.log("currentUser:", currentUser);
     e.preventDefault();
     if (!validateForm()) return;
 
@@ -158,8 +199,8 @@ const OrganizerDashboard = () => {
             .map((t) => t.trim())
             .slice(0, 5)
         : [],
-      organizerId: currentUser.id,
     };
+    console.log("castingData wysyłane do backendu:", castingData);
 
     const result = await createCasting(castingData);
 
@@ -479,16 +520,17 @@ const OrganizerDashboard = () => {
                   })}
 
                   {/* Plusik dodający kolejną rolę */}
-                  {availableExtraRoles.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={addEmptyRoleRow}
-                      className="inline-flex items-center text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Dodaj rolę
-                    </button>
-                  )}
+                  {formData.roles.length < ALL_ROLES.length &&
+                    availableExtraRoles.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={addEmptyRoleRow}
+                        className="inline-flex items-center text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
+                      >
+                        <Plus className="w-4 h-4 mr-1" />
+                        Dodaj rolę
+                      </button>
+                    )}
                 </div>
 
                 {/* Termin */}

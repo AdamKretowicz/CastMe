@@ -30,6 +30,7 @@ const ModelDashboard = () => {
         setCastings(data);
       } catch (err) {
         setError("Błąd pobierania castingów");
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -50,6 +51,7 @@ const ModelDashboard = () => {
         console.log("currentUser.id:", currentUser.id);
         console.log("userApplications (response):", data);
       } catch (err) {
+        console.error("Błąd pobierania zgłoszeń użytkownika:", err);
         // Możesz dodać obsługę błędu jeśli chcesz
       }
     };
@@ -118,6 +120,7 @@ const ModelDashboard = () => {
       alert("Zgłoszenie zostało wysłane!");
     } catch (err) {
       alert("Błąd wysyłania zgłoszenia");
+      console.error("Błąd wysyłania zgłoszenia:", err);
     }
   };
 
