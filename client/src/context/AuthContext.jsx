@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { apiFetch } from "../utils/api";
 
 const AuthContext = createContext();
@@ -12,11 +12,9 @@ export function useAuth() {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(() => {
-  const saved = localStorage.getItem("currentUser");
-  return saved ? JSON.parse(saved) : null;
-});
-
+  const [currentUser, setCurrentUser] = useState(
+    JSON.parse(localStorage.getItem("currentUser")) || null
+  );
   const [accessToken, setAccessToken] = useState(
     localStorage.getItem("accessToken")
   );
@@ -31,7 +29,7 @@ export const AuthProvider = ({ children }) => {
         method: "POST",
         body: JSON.stringify({ userName, password }),
       });
-      console.log("Login response:", res);
+
       setAccessToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       setCurrentUser(res.user);
@@ -39,6 +37,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("refreshToken", res.refreshToken);
       localStorage.setItem("currentUser", JSON.stringify(res.user));
+
       return { success: true, user: res.user };
     } catch (err) {
       console.error("Login error:", err);
@@ -64,6 +63,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       setCurrentUser(res);
+      localStorage.setItem("currentUser", JSON.stringify(res));
 
       return { success: true, user: res };
     } catch (err) {
@@ -73,15 +73,54 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 🔑 Wylogowanie
-const logout = () => {
-  setCurrentUser(null);
-  setAccessToken(null);
-  setRefreshToken(null);
-  localStorage.removeItem("accessToken");
-  localStorage.removeItem("refreshToken");
-  localStorage.removeItem("currentUser");
-};
+  const logout = () => {
+    setCurrentUser(null);
+    setAccessToken(null);
+    setRefreshToken(null);
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("currentUser");
+  };
 
+  // 🔄 Przywracanie sesji po odświeżeniu
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    const storedUser = localStorage.getItem("currentUser");
+
+    if (token && storedUser) {
+      setAccessToken(token);
+      setCurrentUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  // ⏳ Automatyczne wylogowanie po 15 minutach bezczynności
+  useEffect(() => {
+    const SESSION_TIMEOUT = 15 * 60 * 1000; // 15 minut
+    let timeoutId;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        logout();
+        alert("Zostałeś automatycznie wylogowany po 15 minutach bezczynności.");
+      }, SESSION_TIMEOUT);
+    };
+
+    if (currentUser) {
+      window.addEventListener("mousemove", resetTimer);
+      window.addEventListener("keydown", resetTimer);
+      window.addEventListener("click", resetTimer);
+
+      resetTimer(); // uruchom timer po zalogowaniu
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("click", resetTimer);
+    };
+  }, [currentUser]);
 
   const value = {
     currentUser,
