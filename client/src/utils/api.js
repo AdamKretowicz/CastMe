@@ -1,6 +1,5 @@
 // src/utils/api.js
 const API_URL = import.meta.env.VITE_API_URL;
-const API_BASE_URL = API_URL; // Adjust if different
 
 //Retrive photo url
 
@@ -67,13 +66,9 @@ export async function fetchUserProfile(userId) {
 }
 
 // Update user profile
-export async function updateUserProfile(userId, profileData, token) {
+export async function updateUserProfile(userId, profileData) {
   return apiFetch(`/user/${userId}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     body: JSON.stringify(profileData),
   });
 }
@@ -251,7 +246,9 @@ export const updateUserExperience = async (
     try {
       const errData = await res.json();
       errorMsg = errData.message || JSON.stringify(errData);
-    } catch {}
+    } catch {
+      // ignore JSON parse error, fallback to default message
+    }
     throw new Error(errorMsg);
   }
 
@@ -275,121 +272,11 @@ export const deleteUserExperience = async (
     try {
       const errData = await res.json();
       errorMsg = errData.message || JSON.stringify(errData);
-    } catch {}
+    } catch {
+      // ignore JSON parse error, fallback to default errorMsg
+    }
     throw new Error(errorMsg);
   }
 
   return true;
-};
-// Favorites Management Functions
-export const fetchFavoriteUsers = async (accessToken) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/favourites`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching favorite users:", error);
-    throw error;
-  }
-};
-
-export const addFavorite = async (userId, accessToken) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/favourites/${userId}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      // try to parse error body, but only if exists
-      const text = await response.text();
-      const errorData = text ? JSON.parse(text) : {};
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    const text = await response.text();
-    return text ? JSON.parse(text) : true; // return true if empty
-  } catch (error) {
-    console.error("Error adding favorite:", error);
-    throw error;
-  }
-};
-
-export const removeFavorite = async (userId, accessToken) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/favourites/${userId}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      const errorData = text ? JSON.parse(text) : {};
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    return true; // success
-  } catch (error) {
-    console.error("Error removing favorite:", error);
-    throw error;
-  }
-};
-
-export const checkIsFavorite = async (userId, accessToken) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/favourites/${userId}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error("Error checking favorite status:", error);
-    return false;
-  }
-};
-// User Roles Management Functions
-export const fetchUserRoles = async (accessToken) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/user/roles`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
-      );
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching user roles:", error);
-    throw error;
-  }
 };
