@@ -44,7 +44,7 @@ const ModelDashboard = () => {
     const fetchApplications = async () => {
       try {
         const data = await apiFetch(
-          `/casting/casting/participant/${currentUser.id}`
+          `/casting/casting/participants/${currentUser.id}`
         );
         setUserApplications(data);
         // DEBUG: wypisz currentUser.id i odpowiedź z backendu
@@ -105,14 +105,14 @@ const ModelDashboard = () => {
   const handleApply = async (castingId) => {
     try {
       await apiFetch(
-        `/casting/casting/${castingId}/participant/${currentUser.id}`,
+        `/casting/casting/${castingId}/participants/${currentUser.id}`,
         {
           method: "POST",
         }
       );
       // Po wysłaniu zgłoszenia odśwież listę zgłoszeń
       const data = await apiFetch(
-        `/casting/casting/participant/${currentUser.id}`
+        `/casting/casting/participants/${currentUser.id}`
       );
       setUserApplications(data);
       setSelectedCasting(null);

@@ -4,8 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { 
-  fetchUserProfile, 
+import {
+  fetchUserProfile,
   updateUserProfile,
   fetchUserPhotos,
   addUserPhoto,
@@ -14,23 +14,23 @@ import {
   addUserExperience,
   updateUserExperience,
   deleteUserExperience,
-  getPhotoUrl
+  getPhotoUrl,
 } from "../utils/api";
 import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
 import Input from "../components/UI/Input";
 import Textarea from "../components/UI/Textarea";
 import Select from "../components/UI/Select";
-import { 
-  ArrowLeft, 
-  Save, 
-  User, 
-  MapPin, 
-  Ruler, 
-  Weight, 
-  Palette, 
-  Shirt, 
-  Info, 
+import {
+  ArrowLeft,
+  Save,
+  User,
+  MapPin,
+  Ruler,
+  Weight,
+  Palette,
+  Shirt,
+  Info,
   Camera,
   Briefcase,
   Plus,
@@ -38,15 +38,14 @@ import {
   Star,
   Edit3,
   Upload,
-  X
+  X,
 } from "lucide-react";
 
 export default function EditProfilePage() {
   const navigate = useNavigate();
   const { accessToken, currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
-  
-  
+
   // Profile form data
   const [formData, setFormData] = useState({
     userName: "",
@@ -62,14 +61,14 @@ export default function EditProfilePage() {
     weight: 0,
     hairColor: "",
     clothingSize: "",
-    description: ""
+    description: "",
   });
-  
+
   // Photos state
   const [photos, setPhotos] = useState([]);
   const [photoFiles, setPhotoFiles] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  
+
   // Experience state
   const [experiences, setExperiences] = useState([]);
   const [editingExperience, setEditingExperience] = useState(null);
@@ -83,9 +82,8 @@ export default function EditProfilePage() {
     startDate: "",
     endDate: "",
     link: "",
-    stillWorking: false
+    stillWorking: false,
   });
-
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,7 +93,7 @@ export default function EditProfilePage() {
   const genderOptions = [
     { value: 1, label: "Mężczyzna" },
     { value: 2, label: "Kobieta" },
-    { value: 3, label: "Inne" }
+    { value: 3, label: "Inne" },
   ];
 
   const clothingSizeOptions = [
@@ -104,7 +102,7 @@ export default function EditProfilePage() {
     { value: "M", label: "M" },
     { value: "L", label: "L" },
     { value: "XL", label: "XL" },
-    { value: "XXL", label: "XXL" }
+    { value: "XXL", label: "XXL" },
   ];
 
   const hairColorOptions = [
@@ -113,9 +111,8 @@ export default function EditProfilePage() {
     { value: "Czarne", label: "Czarne" },
     { value: "Rude", label: "Rude" },
     { value: "Siwe", label: "Siwe" },
-    { value: "Inne", label: "Inne" }
+    { value: "Inne", label: "Inne" },
   ];
-
 
   useEffect(() => {
     if (!accessToken || !currentUser) {
@@ -131,7 +128,7 @@ export default function EditProfilePage() {
     try {
       const [profileData, photosData] = await Promise.all([
         fetchUserProfile(currentUser.id, accessToken),
-        fetchUserPhotos(currentUser.id, accessToken)
+        fetchUserPhotos(currentUser.id, accessToken),
       ]);
 
       setFormData({
@@ -139,7 +136,9 @@ export default function EditProfilePage() {
         firstName: profileData.firstName || "",
         lastName: profileData.lastName || "",
         phone: profileData.phone || "",
-        dateOfBirth: profileData.dateOfBirth ? new Date(profileData.dateOfBirth).toISOString().split('T')[0] : "",
+        dateOfBirth: profileData.dateOfBirth
+          ? new Date(profileData.dateOfBirth).toISOString().split("T")[0]
+          : "",
         email: profileData.email || "",
         country: profileData.country || "",
         city: profileData.city || "",
@@ -148,7 +147,7 @@ export default function EditProfilePage() {
         weight: profileData.weight || 0,
         hairColor: profileData.hairColor || "",
         clothingSize: profileData.clothingSize || "",
-        description: profileData.description || ""
+        description: profileData.description || "",
       });
 
       setPhotos(photosData || []);
@@ -161,9 +160,9 @@ export default function EditProfilePage() {
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
     if (success) setSuccess(false);
     if (error) setError(null);
@@ -177,9 +176,11 @@ export default function EditProfilePage() {
     try {
       const submitData = {
         ...formData,
-        dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : null,
+        dateOfBirth: formData.dateOfBirth
+          ? new Date(formData.dateOfBirth).toISOString()
+          : null,
         height: Number(formData.height),
-        weight: Number(formData.weight)
+        weight: Number(formData.weight),
       };
 
       await updateUserProfile(currentUser.id, submitData, accessToken);
@@ -239,42 +240,41 @@ export default function EditProfilePage() {
     }
   };
 
-const { getRootProps, getInputProps, isDragActive } = useDropzone({
-  onDrop: (acceptedFiles) => setPhotoFiles(prev => [...prev, ...acceptedFiles]),
-  accept: { "image/*": [] },
-  multiple: true, 
-});
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop: (acceptedFiles) =>
+      setPhotoFiles((prev) => [...prev, ...acceptedFiles]),
+    accept: { "image/*": [] },
+    multiple: true,
+  });
 
-// Paste from clipboard (multi-photo compatible)
-useEffect(() => {
-  const handlePaste = (e) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
+  // Paste from clipboard (multi-photo compatible)
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
 
-    const files = [];
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const file = item.getAsFile();
-        if (file) files.push(file);
+      const files = [];
+      for (const item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
       }
-    }
 
-    if (files.length > 0) {
-      setPhotoFiles(prev => [...prev, ...files]);
-    }
-  };
+      if (files.length > 0) {
+        setPhotoFiles((prev) => [...prev, ...files]);
+      }
+    };
 
-  window.addEventListener("paste", handlePaste);
-  return () => window.removeEventListener("paste", handlePaste);
-}, []);
-
-
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   // Experience handlers
   const handleExperienceInputChange = (field, value) => {
-    setExperienceForm(prev => ({
+    setExperienceForm((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -285,7 +285,7 @@ useEffect(() => {
       description: "",
       startDate: "",
       endDate: "",
-      link: ""
+      link: "",
     });
     setEditingExperience(null);
     setShowExperienceForm(true);
@@ -296,65 +296,81 @@ useEffect(() => {
       projectName: experience.projectName || "",
       role: experience.role || "",
       description: experience.description || "",
-      startDate: experience.startDate ? new Date(experience.startDate).toISOString().split('T')[0] : "",
-      endDate: experience.endDate ? new Date(experience.endDate).toISOString().split('T')[0] : "",
-      link: experience.link || ""
+      startDate: experience.startDate
+        ? new Date(experience.startDate).toISOString().split("T")[0]
+        : "",
+      endDate: experience.endDate
+        ? new Date(experience.endDate).toISOString().split("T")[0]
+        : "",
+      link: experience.link || "",
     });
     setEditingExperience(experience);
     setShowExperienceForm(true);
   };
 
   const handleSaveExperience = async () => {
-  try {
-    // Build submit data
-    const submitData = {
-      projectName: experienceForm.projectName,
-      role: experienceForm.role,
-      description: experienceForm.description,
-      startDate: experienceForm.startDate ? new Date(experienceForm.startDate).toISOString() : null,
-      // Only include endDate if not still working
-      ...(experienceForm.stillWorking ? {} : { endDate: experienceForm.endDate ? new Date(experienceForm.endDate).toISOString() : null }),
-      // Only include link if not empty
-      ...(experienceForm.link ? { link: experienceForm.link } : {})
-    };
+    try {
+      // Build submit data
+      const submitData = {
+        projectName: experienceForm.projectName,
+        role: experienceForm.role,
+        description: experienceForm.description,
+        startDate: experienceForm.startDate
+          ? new Date(experienceForm.startDate).toISOString()
+          : null,
+        // Only include endDate if not still working
+        ...(experienceForm.stillWorking
+          ? {}
+          : {
+              endDate: experienceForm.endDate
+                ? new Date(experienceForm.endDate).toISOString()
+                : null,
+            }),
+        // Only include link if not empty
+        ...(experienceForm.link ? { link: experienceForm.link } : {}),
+      };
 
-    if (editingExperience) {
-      await updateUserExperience(currentUser.id, editingExperience.id, submitData, accessToken);
-    } else {
-      await addUserExperience(currentUser.id, submitData, accessToken);
+      if (editingExperience) {
+        await updateUserExperience(
+          currentUser.id,
+          editingExperience.id,
+          submitData,
+          accessToken
+        );
+      } else {
+        await addUserExperience(currentUser.id, submitData, accessToken);
+      }
+
+      const profileData = await fetchUserProfile(currentUser.id, accessToken);
+      setExperiences(profileData.experiences || []);
+      setShowExperienceForm(false);
+      setEditingExperience(null);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err.message || "Błąd zapisywania doświadczenia");
     }
-
-    const profileData = await fetchUserProfile(currentUser.id, accessToken);
-    setExperiences(profileData.experiences || []);
-    setShowExperienceForm(false);
-    setEditingExperience(null);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-  } catch (err) {
-    setError(err.message || "Błąd zapisywania doświadczenia");
-  }
-};
-
+  };
 
   const handleDeleteExperience = async (experienceId) => {
-  try {
-    await deleteUserExperience(currentUser.id, experienceId, accessToken);
-    const profileData = await fetchUserProfile(currentUser.id, accessToken);
-    setExperiences(profileData.experiences || []);
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-  } catch (err) {
-    setError(err.message || "Błąd usuwania doświadczenia");
-  }
-};
+    try {
+      await deleteUserExperience(currentUser.id, experienceId, accessToken);
+      const profileData = await fetchUserProfile(currentUser.id, accessToken);
+      setExperiences(profileData.experiences || []);
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err.message || "Błąd usuwania doświadczenia");
+    }
+  };
 
-
-  if (loading) return <div className="text-center py-10">Ładowanie profilu...</div>;
+  if (loading)
+    return <div className="text-center py-10">Ładowanie profilu...</div>;
 
   const tabs = [
     { id: "profile", label: "Profil", icon: User },
     { id: "photos", label: "Zdjęcia", icon: Camera },
-    { id: "experience", label: "Doświadczenie", icon: Briefcase }
+    { id: "experience", label: "Doświadczenie", icon: Briefcase },
   ];
 
   return (
@@ -415,12 +431,14 @@ useEffect(() => {
                 <User size={24} className="inline mr-2 text-[#EA1A62]" />
                 Podstawowe informacje
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Nazwa użytkownika"
                   value={formData.userName}
-                  onChange={(e) => handleInputChange("userName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("userName", e.target.value)
+                  }
                   required
                 />
                 <Input
@@ -433,13 +451,17 @@ useEffect(() => {
                 <Input
                   label="Imię"
                   value={formData.firstName}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("firstName", e.target.value)
+                  }
                   required
                 />
                 <Input
                   label="Nazwisko"
                   value={formData.lastName}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("lastName", e.target.value)
+                  }
                   required
                 />
                 <Input
@@ -451,7 +473,9 @@ useEffect(() => {
                   label="Data urodzenia"
                   type="date"
                   value={formData.dateOfBirth}
-                  onChange={(e) => handleInputChange("dateOfBirth", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("dateOfBirth", e.target.value)
+                  }
                 />
               </div>
             </Card>
@@ -462,7 +486,7 @@ useEffect(() => {
                 <MapPin size={24} className="inline mr-2 text-[#EA1A62]" />
                 Lokalizacja
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Kraj"
@@ -483,12 +507,14 @@ useEffect(() => {
                 <Ruler size={24} className="inline mr-2 text-[#EA1A62]" />
                 Dane fizyczne
               </h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Select
                   label="Płeć"
                   value={formData.gender}
-                  onChange={(e) => handleInputChange("gender", Number(e.target.value))}
+                  onChange={(e) =>
+                    handleInputChange("gender", Number(e.target.value))
+                  }
                   options={genderOptions}
                 />
                 <Input
@@ -510,16 +536,20 @@ useEffect(() => {
                 <Select
                   label="Kolor włosów"
                   value={formData.hairColor}
-                  onChange={(e) => handleInputChange("hairColor", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("hairColor", e.target.value)
+                  }
                   options={hairColorOptions}
                 />
               </div>
-              
+
               <div className="mt-4">
                 <Select
                   label="Rozmiar odzieży"
                   value={formData.clothingSize}
-                  onChange={(e) => handleInputChange("clothingSize", e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("clothingSize", e.target.value)
+                  }
                   options={clothingSizeOptions}
                 />
               </div>
@@ -528,14 +558,15 @@ useEffect(() => {
             {/* Opis */}
             <Card className="p-6 mb-6">
               <h2 className="text-2xl font-semibold mb-6">
-                <Info size={24} className="inline mr-2 text-[#EA1A62]" />
-                O mnie
+                <Info size={24} className="inline mr-2 text-[#EA1A62]" />O mnie
               </h2>
-              
+
               <Textarea
                 label="Opis"
                 value={formData.description}
-                onChange={(e) => handleInputChange("description", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("description", e.target.value)
+                }
                 rows={6}
                 placeholder="Opowiedz coś o sobie..."
               />
@@ -562,64 +593,68 @@ useEffect(() => {
           </form>
         )}
 
-                {/* Photos Tab */}
+        {/* Photos Tab */}
         {activeTab === "photos" && (
           <div>
-{/* Upload Photo */}
-<Card className="p-6 mb-6">
-  <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-    <Upload size={24} className="text-[#EA1A62]" />
-    Dodaj nowe zdjęcia
-  </h2>
+            {/* Upload Photo */}
+            <Card className="p-6 mb-6">
+              <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                <Upload size={24} className="text-[#EA1A62]" />
+                Dodaj nowe zdjęcia
+              </h2>
 
-  <div
-    {...getRootProps()}
-    className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer ${
-      isDragActive ? "border-[#EA1A62] bg-[#ffe6f0]" : "border-gray-300"
-    }`}
-  >
-    <input {...getInputProps()} />
-    <p className="mb-2 text-gray-500 text-center">
-      Przeciągnij i upuść zdjęcia tutaj, lub kliknij aby wybrać z folderu
-    </p>
-    <p className="text-gray-400 text-sm">
-      Możesz też wkleić zdjęcia (Ctrl + V)
-    </p>
-  </div>
+              <div
+                {...getRootProps()}
+                className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg cursor-pointer ${
+                  isDragActive
+                    ? "border-[#EA1A62] bg-[#ffe6f0]"
+                    : "border-gray-300"
+                }`}
+              >
+                <input {...getInputProps()} />
+                <p className="mb-2 text-gray-500 text-center">
+                  Przeciągnij i upuść zdjęcia tutaj, lub kliknij aby wybrać z
+                  folderu
+                </p>
+                <p className="text-gray-400 text-sm">
+                  Możesz też wkleić zdjęcia (Ctrl + V)
+                </p>
+              </div>
 
-  {photoFiles.length > 0 && (
-    <div className="mt-4 grid grid-cols-3 gap-4">
-      {photoFiles.map((file, idx) => (
-        <div key={idx} className="relative">
-          <img
-            src={URL.createObjectURL(file)}
-            alt={`Preview ${idx}`}
-            className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
-          />
-          <button
-            onClick={() =>
-              setPhotoFiles(prev => prev.filter((_, i) => i !== idx))
-            }
-            className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"
-          >
-            X
-          </button>
-        </div>
-      ))}
-    </div>
-  )}
+              {photoFiles.length > 0 && (
+                <div className="mt-4 grid grid-cols-3 gap-4">
+                  {photoFiles.map((file, idx) => (
+                    <div key={idx} className="relative">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={`Preview ${idx}`}
+                        className="w-full h-24 object-cover rounded-lg border-2 border-gray-200"
+                      />
+                      <button
+                        onClick={() =>
+                          setPhotoFiles((prev) =>
+                            prev.filter((_, i) => i !== idx)
+                          )
+                        }
+                        className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"
+                      >
+                        X
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-  {photoFiles.length > 0 && (
-    <Button
-      onClick={handlePhotoUpload}
-      disabled={uploadingPhoto}
-      className="mt-4 bg-[#EA1A62] text-white px-6 py-2 rounded-full font-bold hover:bg-[#c91653] transition-colors disabled:opacity-50"
-    >
-      {uploadingPhoto ? "Wysyłanie..." : "Dodaj zdjęcia"}
-    </Button>
-  )}
-</Card>
-
+              {photoFiles.length > 0 && (
+                <Button
+                  onClick={handlePhotoUpload}
+                  disabled={uploadingPhoto}
+                  className="mt-4 bg-[#EA1A62] text-white px-6 py-2 rounded-full font-bold hover:bg-[#c91653] transition-colors disabled:opacity-50"
+                >
+                  {uploadingPhoto ? "Wysyłanie..." : "Dodaj zdjęcia"}
+                </Button>
+              )}
+            </Card>
 
             {/* Photos Grid */}
             <Card className="p-6">
@@ -627,7 +662,7 @@ useEffect(() => {
                 <Camera size={24} className="inline mr-2 text-[#EA1A62]" />
                 Twoje zdjęcia
               </h2>
-              
+
               {photos.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   Nie masz jeszcze żadnych zdjęć
@@ -641,7 +676,7 @@ useEffect(() => {
                         alt="User photo"
                         className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
                       />
-                      
+
                       {/* Photo Actions */}
                       <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                         {!photo.isMain && (
@@ -653,7 +688,7 @@ useEffect(() => {
                             <Star size={16} />
                           </button>
                         )}
-                        
+
                         <button
                           onClick={() => handleDeletePhoto(photo.id)}
                           className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
@@ -661,9 +696,8 @@ useEffect(() => {
                         >
                           <Trash2 size={16} />
                         </button>
-
                       </div>
-                      
+
                       {/* Main Photo Badge */}
                       {photo.isMain && (
                         <div className="absolute top-2 right-2 bg-yellow-500 text-white p-1 rounded-full">
@@ -697,109 +731,126 @@ useEffect(() => {
                 </Button>
               </div>
             </Card>
-              {/* Experience Form */}
-              {showExperienceForm && (
-                <Card className="p-6 mb-6 border-l-4 border-[#EA1A62]">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-semibold">
-                      {editingExperience ? "Edytuj doświadczenie" : "Dodaj nowe doświadczenie"}
-                    </h3>
-                    <button
-                      onClick={() => setShowExperienceForm(false)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
+            {/* Experience Form */}
+            {showExperienceForm && (
+              <Card className="p-6 mb-6 border-l-4 border-[#EA1A62]">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-semibold">
+                    {editingExperience
+                      ? "Edytuj doświadczenie"
+                      : "Dodaj nowe doświadczenie"}
+                  </h3>
+                  <button
+                    onClick={() => setShowExperienceForm(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      label="Nazwa projektu"
-                      value={experienceForm.projectName}
-                      onChange={(e) => handleExperienceInputChange("projectName", e.target.value)}
-                      required
-                    />
-                    <Input
-                      label="Rola"
-                      value={experienceForm.role}
-                      onChange={(e) => handleExperienceInputChange("role", e.target.value)}
-                      required
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    label="Nazwa projektu"
+                    value={experienceForm.projectName}
+                    onChange={(e) =>
+                      handleExperienceInputChange("projectName", e.target.value)
+                    }
+                    required
+                  />
+                  <Input
+                    label="Rola"
+                    value={experienceForm.role}
+                    onChange={(e) =>
+                      handleExperienceInputChange("role", e.target.value)
+                    }
+                    required
+                  />
 
-                    {/* Start and End Dates */}
+                  {/* Start and End Dates */}
+                  <Input
+                    label="Data rozpoczęcia"
+                    type="date"
+                    value={experienceForm.startDate}
+                    onChange={(e) =>
+                      handleExperienceInputChange("startDate", e.target.value)
+                    }
+                  />
+
+                  {!experienceForm.stillWorking && (
                     <Input
-                      label="Data rozpoczęcia"
+                      label="Data zakończenia"
                       type="date"
-                      value={experienceForm.startDate}
-                      onChange={(e) => handleExperienceInputChange("startDate", e.target.value)}
+                      value={experienceForm.endDate}
+                      onChange={(e) =>
+                        handleExperienceInputChange("endDate", e.target.value)
+                      }
                     />
+                  )}
 
-                    {!experienceForm.stillWorking && (
-                      <Input
-                        label="Data zakończenia"
-                        type="date"
-                        value={experienceForm.endDate}
-                        onChange={(e) => handleExperienceInputChange("endDate", e.target.value)}
-                      />
-                    )}
-
-                    {/* Checkbox under dates, full width */}
-                    <div className="md:col-span-2 flex align-right gap-2 mt-2">
-                      <input
-                        type="checkbox"
-                        id="stillWorking"
-                        checked={experienceForm.stillWorking || false}
-                        onChange={(e) =>
-                          handleExperienceInputChange("stillWorking", e.target.checked)
-                        }
-                        className="w-4 h-4"
-                      />
-                      <label htmlFor="stillWorking" className="text-gray-700">
-                        Nadal pracuję tutaj
-                      </label>
-                    </div>
-
-                    {/* Optional Link */}
-                    <div className="md:col-span-2">
-                      <Input
-                        label="Link"
-                        value={experienceForm.link}
-                        onChange={(e) => handleExperienceInputChange("link", e.target.value)}
-                        placeholder="https://..."
-                      />
-                    </div>
+                  {/* Checkbox under dates, full width */}
+                  <div className="md:col-span-2 flex align-right gap-2 mt-2">
+                    <input
+                      type="checkbox"
+                      id="stillWorking"
+                      checked={experienceForm.stillWorking || false}
+                      onChange={(e) =>
+                        handleExperienceInputChange(
+                          "stillWorking",
+                          e.target.checked
+                        )
+                      }
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="stillWorking" className="text-gray-700">
+                      Nadal pracuję tutaj
+                    </label>
                   </div>
 
-                  <div className="mt-4">
-                    <Textarea
-                      label="Opis"
-                      value={experienceForm.description}
-                      onChange={(e) => handleExperienceInputChange("description", e.target.value)}
-                      rows={4}
-                      placeholder="Opisz swoje doświadczenie..."
+                  {/* Optional Link */}
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Link"
+                      value={experienceForm.link}
+                      onChange={(e) =>
+                        handleExperienceInputChange("link", e.target.value)
+                      }
+                      placeholder="https://..."
                     />
                   </div>
+                </div>
 
-                  <div className="flex justify-end gap-4 mt-6">
-                    <Button
-                      type="button"
-                      onClick={() => setShowExperienceForm(false)}
-                      className="bg-gray-500 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-600 transition-colors"
-                    >
-                      Anuluj
-                    </Button>
-                    <Button
-                      onClick={handleSaveExperience}
-                      className="bg-[#EA1A62] text-white px-6 py-2 rounded-full font-bold hover:bg-[#c91653] transition-colors"
-                    >
-                      <Save size={16} className="inline mr-2" />
-                      Zapisz
-                    </Button>
-                  </div>
-                </Card>
-              )}
+                <div className="mt-4">
+                  <Textarea
+                    label="Opis"
+                    value={experienceForm.description}
+                    onChange={(e) =>
+                      handleExperienceInputChange("description", e.target.value)
+                    }
+                    rows={4}
+                    placeholder="Opisz swoje doświadczenie..."
+                  />
+                </div>
 
-           {/* Experience List */}
+                <div className="flex justify-end gap-4 mt-6">
+                  <Button
+                    type="button"
+                    onClick={() => setShowExperienceForm(false)}
+                    className="bg-gray-500 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-600 transition-colors"
+                  >
+                    Anuluj
+                  </Button>
+                  <Button
+                    onClick={handleSaveExperience}
+                    className="bg-[#EA1A62] text-white px-6 py-2 rounded-full font-bold hover:bg-[#c91653] transition-colors"
+                  >
+                    <Save size={16} className="inline mr-2" />
+                    Zapisz
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Experience List */}
             {experiences.length === 0 ? (
               <Card className="p-6">
                 <div className="text-center py-8 text-gray-500">
@@ -809,18 +860,30 @@ useEffect(() => {
             ) : (
               <div className="space-y-4">
                 {experiences
-                  .filter((exp) => !editingExperience || exp.id !== editingExperience.id) // hide the one being edited
+                  .filter(
+                    (exp) =>
+                      !editingExperience || exp.id !== editingExperience.id
+                  ) // hide the one being edited
                   .map((exp) => (
                     <Card key={exp.id} className="p-6">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <h3 className="text-xl font-semibold">{exp.projectName}</h3>
-                          <p className="font-medium text-[#EA1A62]">{exp.role}</p>
-                          <p className="text-sm text-gray-500 mb-2">
-                            {exp.startDate && new Date(exp.startDate).toLocaleDateString()} -{" "}
-                            {exp.endDate && new Date(exp.endDate).toLocaleDateString()}
+                          <h3 className="text-xl font-semibold">
+                            {exp.projectName}
+                          </h3>
+                          <p className="font-medium text-[#EA1A62]">
+                            {exp.role}
                           </p>
-                          <p className="text-gray-700 mb-2">{exp.description}</p>
+                          <p className="text-sm text-gray-500 mb-2">
+                            {exp.startDate &&
+                              new Date(exp.startDate).toLocaleDateString()}{" "}
+                            -{" "}
+                            {exp.endDate &&
+                              new Date(exp.endDate).toLocaleDateString()}
+                          </p>
+                          <p className="text-gray-700 mb-2">
+                            {exp.description}
+                          </p>
                           {exp.link && (
                             <a
                               href={exp.link}
@@ -847,47 +910,46 @@ useEffect(() => {
                           >
                             <Trash2 size={16} />
                           </button>
-
                         </div>
                       </div>
                     </Card>
                   ))}
               </div>
             )}
-          {experienceToDelete && (
-            <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.30)] z-50">
-              <div className="bg-white rounded-2xl shadow-lg p-6 w-96">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                  Potwierdź usunięcie
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Czy na pewno chcesz usunąć doświadczenie{" "}
-                  <span className="font-medium text-[#EA1A62]">
-                    {experienceToDelete.projectName}
-                  </span>
-                  ?
-                </p>
+            {experienceToDelete && (
+              <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0,0,0,0.30)] z-50">
+                <div className="bg-white rounded-2xl shadow-lg p-6 w-96">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                    Potwierdź usunięcie
+                  </h2>
+                  <p className="text-gray-600 mb-6">
+                    Czy na pewno chcesz usunąć doświadczenie{" "}
+                    <span className="font-medium text-[#EA1A62]">
+                      {experienceToDelete.projectName}
+                    </span>
+                    ?
+                  </p>
 
-                <div className="flex justify-end gap-4">
-                  <button
-                    onClick={() => setExperienceToDelete(null)}
-                    className="px-4 py-2 rounded-full bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors"
-                  >
-                    Anuluj
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleDeleteExperience(experienceToDelete.id);
-                      setExperienceToDelete(null);
-                    }}
-                    className="px-4 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
-                  >
-                    Tak, usuń
-                  </button>
+                  <div className="flex justify-end gap-4">
+                    <button
+                      onClick={() => setExperienceToDelete(null)}
+                      className="px-4 py-2 rounded-full bg-gray-300 text-gray-800 hover:bg-gray-400 transition-colors"
+                    >
+                      Anuluj
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDeleteExperience(experienceToDelete.id);
+                        setExperienceToDelete(null);
+                      }}
+                      className="px-4 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                    >
+                      Tak, usuń
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         )}
       </div>
