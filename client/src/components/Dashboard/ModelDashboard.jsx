@@ -4,6 +4,7 @@ import { apiFetch } from "../../utils/api";
 import {
   Calendar,
   MapPin,
+  Users,
   Clock,
   CheckCircle,
   XCircle,
@@ -12,41 +13,54 @@ import {
 import Card from "../UI/Card";
 import Button from "../UI/Button";
 
-// EN(PascalCase) → PL (fallback: obsługa również już-polskich etykiet)
-const ROLE_PL = {
-  Model: "Model",
-  Photographer: "Fotograf",
-  Designer: "Projektant",
-  Volunteer: "Wolontariusz",
-  Fotograf: "Fotograf",
-  Projektant: "Projektant",
-  Wolontariusz: "Wolontariusz",
-};
-
-// Ujednolicenie nazw ról na EN(PascalCase), żeby liczniki zawsze trafiały
-const toPascalEN = (role) => {
-  const r = String(role || "").toLowerCase();
-  if (r.includes("model")) return "Model";
-  if (r.includes("photographer") || r.includes("fotograf"))
-    return "Photographer";
-  if (r.includes("designer") || r.includes("projektant")) return "Designer";
-  if (r.includes("volunteer") || r.includes("wolontariusz")) return "Volunteer";
-  return role || "";
-};
-
 const ModelDashboard = () => {
   const { currentUser } = useAuth();
-
   const [castings, setCastings] = useState([]);
-  const [participantsByCasting, setParticipantsByCasting] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
+  // Zgłoszenia użytkownika z API
   const [userApplications, setUserApplications] = useState([]);
 
-  const formatDate = (d) => (d ? new Date(d).toLocaleDateString("pl-PL") : "-");
+  useEffect(() => {
+    const fetchCastings = async () => {
+      try {
+        const data = await apiFetch("/casting/casting");
+        setCastings(data);
+      } catch (err) {
+        setError("Błąd pobierania castingów");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCastings();
+  }, []);
+
+  // Pobierz zgłoszenia użytkownika z API
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchApplications = async () => {
+      try {
+        const data = await apiFetch(
+          `/casting/casting/participants/${currentUser.id}`
+        );
+        setUserApplications(data);
+        // DEBUG: wypisz currentUser.id i odpowiedź z backendu
+        console.log("currentUser.id:", currentUser.id);
+        console.log("userApplications (response):", data);
+      } catch (err) {
+        console.error("Błąd pobierania zgłoszeń użytkownika:", err);
+        // Możesz dodać obsługę błędu jeśli chcesz
+      }
+    };
+    fetchApplications();
+  }, [currentUser]);
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString("pl-PL");
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -87,103 +101,33 @@ const ModelDashboard = () => {
     }
   };
 
-  // Pobierz uczestników castingu → liczymy per rola (po EN PascalCase)
-  const fetchParticipants = async (castingId) => {
-    try {
-      const data = await apiFetch(`/casting/casting/participants/${castingId}`);
-
-      const counts = {};
-      const p = data?.participants;
-
-      // Obsłuż oba możliwe kształty odpowiedzi:
-      // A) tablica obiektów z polem role/castingRole
-      if (Array.isArray(p)) {
-        for (const item of p) {
-          const key = toPascalEN(item?.role ?? item?.castingRole);
-          if (key) counts[key] = (counts[key] || 0) + 1;
-        }
-      }
-      // B) obiekt { roleName: [ ...participants ] }
-      else if (p && typeof p === "object") {
-        for (const [roleKey, arr] of Object.entries(p)) {
-          const key = toPascalEN(roleKey);
-          counts[key] = Array.isArray(arr) ? arr.length : 0;
-        }
-      }
-
-      setParticipantsByCasting((prev) => ({ ...prev, [castingId]: counts }));
-    } catch (err) {
-      console.error("Błąd pobierania uczestników castingu:", err);
-    }
-  };
-
-  // POPRAWIONA LOGIKA - używamy podstawowego endpointu, który już ma role
-  useEffect(() => {
-    const fetchCastings = async () => {
-      setLoading(true);
-      try {
-        // Podstawowy endpoint już ma role - nie trzeba dodatkowych wywołań
-        const list = (await apiFetch("/casting/casting")) ?? [];
-        console.log("Pobrane castingi z rolami:", list); // DEBUG
-
-        // Ustaw castingi - role już są w odpowiedzi
-        setCastings(list);
-
-        // Pobierz liczniki uczestników dla każdego castingu
-        const participantsPromises = list.map((c) => fetchParticipants(c.id));
-        await Promise.all(participantsPromises);
-      } catch (err) {
-        console.error("Błąd pobierania castingów:", err);
-        setError("Błąd pobierania castingów");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCastings();
-  }, []);
-
-  // 2) Zgłoszenia użytkownika
-  useEffect(() => {
-    if (!currentUser) return;
-    const fetchApplications = async () => {
-      try {
-        const data = await apiFetch(
-          `/casting/casting/participant/${currentUser.id}`
-        );
-        setUserApplications(data || []);
-      } catch (err) {
-        console.error("Błąd pobierania zgłoszeń użytkownika:", err);
-      }
-    };
-    fetchApplications();
-  }, [currentUser]);
-
-  // 3) Zgłoszenie do castingu
+  // Obsługa zgłoszenia do castingu przez API
   const handleApply = async (castingId) => {
     try {
       await apiFetch(
-        `/casting/casting/${castingId}/participant/${currentUser.id}`,
+        `/casting/casting/${castingId}/participants/${currentUser.id}`,
         {
           method: "POST",
         }
       );
+      // Po wysłaniu zgłoszenia odśwież listę zgłoszeń
       const data = await apiFetch(
-        `/casting/casting/participant/${currentUser.id}`
+        `/casting/casting/participants/${currentUser.id}`
       );
-      setUserApplications(data || []);
+      setUserApplications(data);
       setSelectedCasting(null);
       setApplicationMessage("");
       alert("Zgłoszenie zostało wysłane!");
     } catch (err) {
-      console.error("Błąd wysyłania zgłoszenia:", err);
       alert("Błąd wysyłania zgłoszenia");
+      console.error("Błąd wysyłania zgłoszenia:", err);
     }
   };
 
-  const hasApplied = (castingId) =>
-    userApplications.some(
-      (a) => a.id === castingId || a.castingId === castingId
-    );
+  // Sprawdzanie czy użytkownik już się zgłosił
+  const hasApplied = (castingId) => {
+    return userApplications.some((app) => app.id === castingId);
+  };
 
   if (loading) {
     return (
@@ -213,7 +157,7 @@ const ModelDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Moje zgłoszenia */}
+          {/* My Applications */}
           <div className="lg:col-span-1">
             <Card>
               <Card.Header>
@@ -229,19 +173,18 @@ const ModelDashboard = () => {
                 ) : (
                   <div className="space-y-3">
                     {userApplications.map((application) => {
-                      const casting =
-                        castings.find(
-                          (c) =>
-                            c.id === application.castingId ||
-                            c.id === application.id
-                        ) || {};
+                      const casting = castings.find(
+                        (c) => c.id === application.castingId
+                      );
+                      if (!casting) return null;
+
                       return (
                         <div
                           key={application.id}
                           className="border border-gray-200 rounded-lg p-3"
                         >
                           <h3 className="font-medium text-gray-900 mb-2 text-sm">
-                            {casting.title || "Casting"}
+                            {casting.title}
                           </h3>
                           <div
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
@@ -265,7 +208,7 @@ const ModelDashboard = () => {
             </Card>
           </div>
 
-          {/* Dostępne castingi */}
+          {/* Available Castings */}
           <div className="lg:col-span-2">
             <Card>
               <Card.Header>
@@ -275,105 +218,81 @@ const ModelDashboard = () => {
               </Card.Header>
               <Card.Content>
                 <div className="space-y-6">
-                  {castings.map((casting) => {
-                    const counts = participantsByCasting[casting.id] || {};
-                    console.log(`Casting ${casting.id} roles:`, casting.roles); // DEBUG
-                    console.log(`Casting ${casting.id} counts:`, counts); // DEBUG
-
-                    return (
-                      <div
-                        key={casting.id}
-                        className="border border-gray-200 rounded-lg p-6"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="text-lg font-semibold text-[#2B2628] mb-2">
-                              {casting.title}
-                            </h3>
-                            <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-                              <div className="flex items-center">
-                                <MapPin className="w-4 h-4 mr-1" />
-                                {casting.location}
-                              </div>
-                              <div className="flex items-center">
-                                <Calendar className="w-4 h-4 mr-1" />
-                                {formatDate(casting.eventDate)}
-                              </div>
+                  {castings.map((casting) => (
+                    <div
+                      key={casting.id}
+                      className="border border-gray-200 rounded-lg p-6"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-[#2B2628] mb-2">
+                            {casting.title}
+                          </h3>
+                          <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 mr-1" />
+                              {casting.location}
                             </div>
-
-                            {/* Role z licznikami - POPRAWIONA LOGIKA */}
-                            <div className="flex flex-wrap gap-3 mb-3">
-                              {!casting.roles ? (
-                                <span className="text-gray-400 text-sm">
-                                  Brak informacji o rolach
-                                </span>
-                              ) : !Array.isArray(casting.roles) ? (
-                                <span className="text-gray-400 text-sm">
-                                  Nieprawidłowe dane ról
-                                </span>
-                              ) : casting.roles.length === 0 ? (
-                                <span className="text-gray-400 text-sm">
-                                  Brak ról
-                                </span>
-                              ) : (
-                                casting.roles.map((r, idx) => {
-                                  // r.role zwykle: "Model" | "Photographer" | "Designer" | "Volunteer"
-                                  const keyEN = toPascalEN(r.role);
-                                  const label =
-                                    ROLE_PL[r.role] ?? ROLE_PL[keyEN] ?? r.role;
-                                  const taken =
-                                    counts[keyEN] ?? counts[r.role] ?? 0;
-                                  return (
-                                    <span
-                                      key={`${keyEN}-${idx}`}
-                                      className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                                    >
-                                      {label} {taken}/{r.capacity}
-                                    </span>
-                                  );
-                                })
-                              )}
+                            <div className="flex items-center">
+                              <Users className="w-4 h-4 mr-1" />
+                              {casting.maxPlaces} miejsc
+                            </div>
+                            <div className="flex items-center">
+                              <Calendar className="w-4 h-4 mr-1" />
+                              Do: {formatDate(casting.deadline)}
                             </div>
                           </div>
-                        </div>
-
-                        {casting.description && (
-                          <p className="text-gray-700 mb-4">
-                            {casting.description}
-                          </p>
-                        )}
-
-                        {Array.isArray(casting.tags) &&
-                          casting.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              {casting.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#EA1A62] text-xs rounded-full"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
+                          {casting.salary && (
+                            <div className="text-sm font-medium text-[#EA1A62] mb-3">
+                              Wynagrodzenie: {casting.salary}
                             </div>
                           )}
-
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-gray-500">
-                            Opublikowano: {formatDate(casting.createdAt)}
-                          </p>
-                          {hasApplied(casting.id) ? (
-                            <Button variant="secondary" disabled>
-                              Już się zgłosiłeś
-                            </Button>
-                          ) : (
-                            <Button onClick={() => setSelectedCasting(casting)}>
-                              Zgłoś się
-                            </Button>
-                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {casting.roles.map((role) => (
+                            <span
+                              key={role}
+                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                            >
+                              {role}
+                            </span>
+                          ))}
                         </div>
                       </div>
-                    );
-                  })}
+
+                      <p className="text-gray-700 mb-4">
+                        {casting.description}
+                      </p>
+
+                      {casting.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {casting.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm text-gray-500">
+                          Opublikowano: {formatDate(casting.createdAt)}
+                        </p>
+                        {hasApplied(casting.id) ? (
+                          <Button variant="secondary" disabled>
+                            Już się zgłosiłeś
+                          </Button>
+                        ) : (
+                          <Button onClick={() => setSelectedCasting(casting)}>
+                            Zgłoś się
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card.Content>
             </Card>
@@ -381,7 +300,7 @@ const ModelDashboard = () => {
         </div>
       </div>
 
-      {/* Modal zgłoszenia */}
+      {/* Application Modal */}
       {selectedCasting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
