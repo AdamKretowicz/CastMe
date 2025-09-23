@@ -1,26 +1,100 @@
-// src/pages/ProfilePage.jsx
+// src/pages/ProfilePage.jsx - Updated with proper favorites API
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { fetchUserProfile, getPhotoUrl } from "../utils/api";
+import { 
+  fetchUserProfile, 
+  getPhotoUrl, 
+  checkIsFavorite, 
+  addFavorite, 
+  removeFavorite 
+} from "../utils/api";
 import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
-import { Heart, Calendar, MapPin, Ruler, Weight, Info, Briefcase, Camera, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { 
+  Heart, 
+  Calendar, 
+  MapPin, 
+  Ruler, 
+  Weight, 
+  Info, 
+  Briefcase,
+  Shirt, 
+  Camera, 
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  User, 
+  Smartphone, 
+  Mail, 
+  Scissors, 
+  Users, 
+  Mars, 
+  Venus, 
+  Home, 
+  Globe 
+} from "lucide-react";
 
 export default function ProfilePage() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { accessToken, currentUser } = useAuth();
+  const { accessToken, currentUser, loading: authLoading } = useAuth();
   const [selectedUser, setSelectedUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [modalPhotoIndex, setModalPhotoIndex] = useState(null); // index of photo in otherPhotos
+  const [modalPhotoIndex, setModalPhotoIndex] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
-  const photosPerPage = 8; // 2 rows of 4 photos
+  const photosPerPage = 8;
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
-  const isSelfProfile = currentUser?.id === userId;
+  const isSelfProfile = String(currentUser?.id) === String(userId);
+  const isAdmin = currentUser?.role === 'Admin';
+  console.log(currentUser?.role)
+  console.log(isAdmin) 
+  const fieldIcons = {
+    userName: <User size={18} className="inline mr-2" />,
+    location: <MapPin size={18} className="inline mr-2" />,
+    age: <Calendar size={18} className="inline mr-2" />,
+    height: <Ruler size={18} className="inline mr-2" />,
+    weight: <Weight size={18} className="inline mr-2" />,
+    role: <Briefcase size={18} className="inline mr-2" />,
+    phone: <Smartphone size={18} className="inline mr-2" />,
+    email: <Mail size={18} className="inline mr-2" />,
+    hairColor: <Scissors size={18} className="inline mr-2" />,
+    clothingSize: <Shirt size={18} className="inline mr-2" />, 
+    gender: <Users size={18} className="inline mr-2" />,
+    city: <Home size={18} className="inline mr-2" />,
+    country: <Globe size={18} className="inline mr-2" />,
+  };
+
+  const formatField = (key, value) => {
+    if (value === null || value === undefined || value === "") return null;
+
+    switch (key) {
+      case "gender":
+        return value === 1 ? "Mężczyzna" : value === 2 ? "Kobieta" : "Inna";
+      case "height":
+        return `${value} cm`;
+      case "weight":
+        return `${value} kg`;
+      default:
+        return value;
+    }
+  };
 
   useEffect(() => {
+  setIsFavorite(false);
+  setFavoriteLoading(false);
+  loadProfileData();
+}, [userId]);
+
+
+
+  useEffect(() => {
+    if (authLoading) return; // wait until auth context finishes loading
+
     if (!accessToken) {
       navigate("/login");
       return;
@@ -32,15 +106,38 @@ export default function ProfilePage() {
       return;
     }
 
+    loadProfileData();
+  }, [userId, accessToken, authLoading, navigate]);
+
+
+
+  const loadProfileData = async () => {
     setLoading(true);
-    fetchUserProfile(userId, accessToken)
-      .then((data) => setSelectedUser(data))
-      .catch((err) => setError(err.message || "Błąd pobierania profilu"))
-      .finally(() => setLoading(false));
-  }, [userId, accessToken, navigate]);
+    try {
+      const profileData = await fetchUserProfile(userId, accessToken);
+      setSelectedUser(profileData);
+
+      // Check if this user is in favorites (only for admin and not self profile)
+      if (currentUser?.role === 'admin' && !isSelfProfile) {
+        try {
+          const favoriteStatus = await checkIsFavorite(userId, accessToken);
+          setIsFavorite(favoriteStatus);
+        } catch (err) {
+          console.error('Error checking favorites:', err);
+        }
+      }
+
+
+    } catch (err) {
+      setError(err.message || "Błąd pobierania profilu");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const allPhotos = selectedUser?.photos || [];
-  // Handlers for modal
+
+  // Modal handlers
   const openModal = (index) => setModalPhotoIndex(index);
   const closeModal = () => setModalPhotoIndex(null);
 
@@ -54,7 +151,28 @@ export default function ProfilePage() {
     setModalPhotoIndex((prev) => (prev + 1) % allPhotos.length);
   }, [modalPhotoIndex, allPhotos.length]);
 
-  // Keyboard navigation
+  const toggleFavorite = useCallback(async () => {
+    if (!isAdmin || isSelfProfile || favoriteLoading) return;
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        await removeFavorite(userId, accessToken);
+        setIsFavorite(false);
+      } else {
+        await addFavorite(userId, accessToken);
+        setIsFavorite(true);
+      }
+    } catch (err) {
+      setError(err.message || "Błąd zmiany statusu ulubionych");
+      // Revert the state on error
+      console.error('Favorite toggle error:', err);
+    } finally {
+      setFavoriteLoading(false);
+    }
+  }, [isFavorite, userId, accessToken, isAdmin, isSelfProfile, favoriteLoading]);
+
+  // Keyboard navigation for modal
   useEffect(() => {
     const handleKey = (e) => {
       if (modalPhotoIndex === null) return;
@@ -75,6 +193,20 @@ export default function ProfilePage() {
     : null;
   const location = selectedUser.city && selectedUser.country ? `${selectedUser.city}, ${selectedUser.country}` : null;
   const mainPhoto = selectedUser.photos?.find(p => p.isMain) || selectedUser.photos?.[0];
+
+  const dynamicInfoFields = [
+    { label: "Wiek", key: "age", value: age },
+    { label: "Lokalizacja", key: "location", value: location },
+    { label: "Nazwa użytkownika", key: "userName", value: selectedUser.userName },
+    { label: "Email", key: "email", value: selectedUser.email },
+    { label: "Telefon", key: "phone", value: selectedUser.phone },
+    { label: "Płeć", key: "gender", value: formatField("gender", selectedUser.gender) },
+    { label: "Wzrost", key: "height", value: formatField("height", selectedUser.height) },
+    { label: "Waga", key: "weight", value: formatField("weight", selectedUser.weight) },
+    { label: "Kolor włosów", key: "hairColor", value: selectedUser.hairColor },
+    { label: "Rozmiar ubrań", key: "clothingSize", value: selectedUser.clothingSize },
+    { label: "Rola", key: "role", value: selectedUser.role },
+  ].filter(f => f.value !== null && f.value !== undefined && f.value !== "");
 
   const handleEditProfile = () => {
     navigate("/edit-profile");
@@ -98,17 +230,38 @@ export default function ProfilePage() {
           </div>
           <h1 className="text-4xl font-bold mt-4">{selectedUser.firstName} {selectedUser.lastName}</h1>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 justify-center">
-            <p><Calendar size={18} className="inline mr-2" /> Wiek: <span className="font-bold">{age || "N/A"}</span></p>
-            <p><MapPin size={18} className="inline mr-2" /> Lokalizacja: <span className="font-bold">{location || "N/A"}</span></p>
-            <p><Ruler size={18} className="inline mr-2" /> Wzrost: <span className="font-bold">{selectedUser.height || "N/A"} cm</span></p>
-            <p><Weight size={18} className="inline mr-2" /> Waga: <span className="font-bold">{selectedUser.weight || "N/A"} kg</span></p>
-            <p><Briefcase size={18} className="inline mr-2" /> Rola: <span className="font-bold">{selectedUser.role}</span></p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
+            {dynamicInfoFields.map(({ label, key, value }) => (
+              <p key={key} className="flex items-center">
+                {fieldIcons[key] || null} 
+                <span className="mr-1 font-semibold">{label}:</span>
+                <span className="font-bold">{value}</span>
+              </p>
+            ))}
           </div>
 
           <p className="mt-4 text-lg leading-relaxed">{selectedUser.description}</p>
-
-
+          
+          {/* Favorite button for admin users */}
+          {isAdmin && !isSelfProfile && (
+            <div className="mt-4">
+              <Button
+                onClick={toggleFavorite}
+                disabled={favoriteLoading}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
+                  isFavorite ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#EA1A62] text-black hover:bg-gray-300'
+                } disabled:opacity-50`}
+              >
+                <Heart size={18} fill={isFavorite ? "white" : "none"} />
+                {favoriteLoading 
+                  ? 'Ładowanie...' 
+                  : isFavorite 
+                    ? 'Usuń z ulubionych' 
+                    : 'Dodaj do ulubionych'
+                }
+              </Button>
+            </div>
+          )}
         </Card>
 
         {/* Gallery */}
@@ -173,7 +326,6 @@ export default function ProfilePage() {
           )}
         </Card>
 
-
         {/* Experience */}
         <Card className="p-6">
           <h2 className="text-2xl font-semibold mb-4 flex items-center">
@@ -206,17 +358,17 @@ export default function ProfilePage() {
           )}
         </Card>
 
-        
-          {isSelfProfile && (
-            <div className="mt-4 flex justify-end">
-              <Button 
-                onClick={handleEditProfile}
-                className="bg-[#EA1A62] text-white px-8 py-3 rounded-full font-bold hover:bg-[#c91653] transition-colors"
-              >
-                Edytuj profil
-              </Button>
-            </div>
-          )}
+        {/* Edit profile button */}
+        {isSelfProfile && (
+          <div className="mt-4 flex justify-end">
+            <Button 
+              onClick={handleEditProfile}
+              className="bg-[#EA1A62] text-white px-8 py-3 rounded-full font-bold hover:bg-[#c91653] transition-colors"
+            >
+              Edytuj profil
+            </Button>
+          </div>
+        )}
 
         {/* Photo modal */}
         {modalPhotoIndex !== null && (
