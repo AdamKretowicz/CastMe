@@ -40,11 +40,14 @@ namespace CastMe.UserApi.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task<Domain.Entities.User> Update(Domain.Entities.User entity, UserDto.Update updateUser )
+        public async Task<Domain.Entities.User> Update(Guid userId, UserDto.Update updateUser )
         {
+            var entity = _context.Users.FirstOrDefault(u => u.Id == userId);
+
             entity.UpdateEntity(updateUser);
 
             //_context.Users.Update(entity);
+
             await _context.SaveChangesAsync();
             return entity;
         }

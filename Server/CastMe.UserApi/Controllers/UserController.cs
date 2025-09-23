@@ -164,7 +164,7 @@ namespace CastMe.UserApi.Controllers
             if (existingUser is null) return NotFound();
 
             
-            var updatedUser = await _userService.Update(existingUser, dto);
+            var updatedUser = await _userService.Update(userId, dto);
 
             return Ok(updatedUser.ToReadDto());
         }
@@ -207,7 +207,7 @@ namespace CastMe.UserApi.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             user.UpdateEntity(updateDto);
-            await _userService.Update(user, updateDto);
+            await _userService.Update(userId, updateDto);
 
             return Ok(user.ToReadDto());
         }
