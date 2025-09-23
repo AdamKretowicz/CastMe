@@ -11,6 +11,7 @@ import Dashboard from "./Pages/Dashboard";
 import ProfilePage from "./Pages/ProfilePage";
 import AboutPage from "./Pages/About";
 import EditProfilePage from "./Pages/EditProfilePage";
+import FavoritesPage from "./Pages/FavoritesPage";
 
 function App() {
   return (
@@ -28,6 +29,8 @@ function App() {
                 <Route path="/profile/:userId" element={<ProfilePage />} />
                 <Route path="/about" element={<AboutPage />} />
                 <Route path="/edit-profile" element={<EditProfilePage />} />
+                <Route path="/favorites" element={<FavoritesPage />} />
+
               </Routes>
             </main>
             <Footer />

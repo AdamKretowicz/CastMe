@@ -12,7 +12,11 @@ export function useAuth() {
 }
 
 export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState(() => {
+  const saved = localStorage.getItem("currentUser");
+  return saved ? JSON.parse(saved) : null;
+});
+
   const [accessToken, setAccessToken] = useState(
     localStorage.getItem("accessToken")
   );
@@ -34,7 +38,7 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem("accessToken", res.accessToken);
       localStorage.setItem("refreshToken", res.refreshToken);
-
+      localStorage.setItem("currentUser", JSON.stringify(res.user));
       return { success: true, user: res.user };
     } catch (err) {
       console.error("Login error:", err);
@@ -69,13 +73,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   // 🔑 Wylogowanie
-  const logout = () => {
-    setCurrentUser(null);
-    setAccessToken(null);
-    setRefreshToken(null);
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-  };
+const logout = () => {
+  setCurrentUser(null);
+  setAccessToken(null);
+  setRefreshToken(null);
+  localStorage.removeItem("accessToken");
+  localStorage.removeItem("refreshToken");
+  localStorage.removeItem("currentUser");
+};
+
 
   const value = {
     currentUser,
