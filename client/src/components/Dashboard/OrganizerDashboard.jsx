@@ -9,6 +9,7 @@ import {
   XCircle,
   AlertCircle,
   X,
+  Calendar,
 } from "lucide-react";
 import Card from "../UI/Card";
 import Button from "../UI/Button";
@@ -17,11 +18,19 @@ import { apiFetch } from "../../utils/api";
 
 const ALL_ROLES = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
 
+/**
+ * Backend oczekuje enumów ról w PascalCase (EN):
+ *  - "Model"
+ *  - "Photographer"
+ *  - "Designer"
+ *  - "Volunteer"
+ * Dlatego mapujemy z polskich etykiet UI → wartości akceptowane przez API.
+ */
 const roleMap = {
-  Model: "model",
-  Fotograf: "photographer",
-  Projektant: "designer",
-  Wolontariusz: "volunteer",
+  Model: "Model",
+  Fotograf: "Photographer",
+  Projektant: "Designer",
+  Wolontariusz: "Volunteer",
 };
 
 const OrganizerDashboard = () => {
@@ -193,7 +202,8 @@ const OrganizerDashboard = () => {
       roles: formData.roles
         .filter((r) => r.role) // ignoruj puste wiersze
         .map((r) => ({
-          role: roleMap[r.role] || r.role,
+          // KLUCZOWE: wysyłamy wartości akceptowane przez API
+          role: roleMap[r.role],
           capacity: parseInt(r.capacity, 10),
         })),
       tags: formData.tags
@@ -667,16 +677,30 @@ const OrganizerDashboard = () => {
                         <h3 className="font-medium text-gray-900 mb-2">
                           {c.title}
                         </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-2">
+
+                        <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-2">
                           <div className="flex items-center">
                             <MapPin className="w-4 h-4 mr-1" />
                             {c.location}
                           </div>
                           <div className="flex items-center">
-                            <Users className="w-4 h-4 mr-1" />
-                            {c.roles?.[0]?.capacity || 0}
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {new Date(c.eventDate).toLocaleDateString("pl-PL")}
                           </div>
                         </div>
+
+                        {/* Role with counts */}
+                        <div className="flex flex-wrap gap-3 mb-2">
+                          {c.roles?.map((role, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                            >
+                              {role.role} {role.acceptedCount}/{role.capacity}
+                            </span>
+                          ))}
+                        </div>
+
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-gray-500">
                             Utworzono:{" "}
