@@ -29,7 +29,6 @@ namespace Infrastructure.Migrations
                     EventDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Requirements = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     Compensation = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    BannerUrl = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     OrganizerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -51,6 +50,31 @@ namespace Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_UserRoles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CastingBanners",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CastingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    OriginalFileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ContentType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    Url = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CastingBanners", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CastingBanners_Castings_CastingId",
+                        column: x => x.CastingId,
+                        principalSchema: "Casting",
+                        principalTable: "Castings",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -135,35 +159,6 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Favourites",
-                schema: "User",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    OrganizerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ModelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Favourites", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Favourites_Users_ModelId",
-                        column: x => x.ModelId,
-                        principalSchema: "User",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Favourites_Users_OrganizerId",
-                        column: x => x.OrganizerId,
-                        principalSchema: "User",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.NoAction);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "CastingAssignments",
                 schema: "Casting",
                 columns: table => new
@@ -225,6 +220,35 @@ namespace Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Favourites",
+                schema: "User",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrganizerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Favourites", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Favourites_Users_ModelId",
+                        column: x => x.ModelId,
+                        principalSchema: "User",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Favourites_Users_OrganizerId",
+                        column: x => x.OrganizerId,
+                        principalSchema: "User",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Photos",
                 columns: table => new
                 {
@@ -270,6 +294,12 @@ namespace Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_CastingBanners_CastingId",
+                table: "CastingBanners",
+                column: "CastingId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CastingRoles_CastingId",
                 schema: "Casting",
                 table: "CastingRoles",
@@ -288,17 +318,6 @@ namespace Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Photos_UserId",
-                table: "Photos",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_RoleId",
-                schema: "User",
-                table: "Users",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Favourites_ModelId",
                 schema: "User",
                 table: "Favourites",
@@ -309,6 +328,17 @@ namespace Infrastructure.Migrations
                 schema: "User",
                 table: "Favourites",
                 column: "OrganizerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Photos_UserId",
+                table: "Photos",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_RoleId",
+                schema: "User",
+                table: "Users",
+                column: "RoleId");
         }
 
         /// <inheritdoc />
@@ -317,6 +347,9 @@ namespace Infrastructure.Migrations
             migrationBuilder.DropTable(
                 name: "CastingAssignments",
                 schema: "Casting");
+
+            migrationBuilder.DropTable(
+                name: "CastingBanners");
 
             migrationBuilder.DropTable(
                 name: "CastingRoles",
@@ -331,15 +364,15 @@ namespace Infrastructure.Migrations
                 schema: "User");
 
             migrationBuilder.DropTable(
+                name: "Favourites",
+                schema: "User");
+
+            migrationBuilder.DropTable(
                 name: "Photos");
 
             migrationBuilder.DropTable(
                 name: "Castings",
                 schema: "Casting");
-
-            migrationBuilder.DropTable(
-                name: "Favourites",
-                schema: "User");
 
             migrationBuilder.DropTable(
                 name: "Users",

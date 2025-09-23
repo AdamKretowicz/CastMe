@@ -34,8 +34,7 @@ namespace Domain.Entities
         [StringLength(100)]
         public string? Compensation { get; set; }
 
-        [StringLength(200)]
-        public string? BannerUrl { get; set; }
+        public CastingBanner Banner { get; set; } = default!;
 
         [Required]
         public Guid OrganizerId { get; set; }

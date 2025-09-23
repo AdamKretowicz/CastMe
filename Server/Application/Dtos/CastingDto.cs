@@ -29,9 +29,6 @@ namespace Application.Dtos
             [StringLength(100)]
             public string? Compensation { get; set; }
 
-            [StringLength(200)]
-            public string? BannerUrl { get; set; }
-
             public List<CreateRole> Roles { get; set; } = new();
 
             public List<string> Tags { get; set; } = new();
@@ -67,9 +64,6 @@ namespace Application.Dtos
             [StringLength(100)]
             public string? Compensation { get; set; }
 
-            [StringLength(200)]
-            public string? BannerUrl { get; set; }
-
             public List<CreateRole> Roles { get; set; } = new();
 
             public List<string> Tags { get; set; } = new();
@@ -87,7 +81,6 @@ namespace Application.Dtos
             public DateTime EventDate { get; set; }
             public string? Requirements { get; set; }
             public string? Compensation { get; set; }
-            public string? BannerUrl { get; set; }
             public Guid OrganizerId { get; set; }
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public CastingStatus Status { get; set; }

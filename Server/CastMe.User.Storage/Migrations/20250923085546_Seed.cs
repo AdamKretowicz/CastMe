@@ -190,7 +190,7 @@ namespace Infrastructure.Migrations
             migrationBuilder.InsertData(
                 schema: "Casting",
                 table: "Castings",
-                columns: new[] { "Id", "Title", "Description", "Location", "EventDate", "Requirements", "Compensation", "BannerUrl", "OrganizerId", "Status", "CreatedAt", "UpdatedAt" },
+                columns: new[] { "Id", "Title", "Description", "Location", "EventDate", "Requirements", "Compensation", "OrganizerId", "Status", "CreatedAt", "UpdatedAt" },
                 values: new object[,]
                 {
                     {
@@ -201,7 +201,6 @@ namespace Infrastructure.Migrations
                         new DateTime(2025, 7, 15, 10, 0, 0),
                         "Must be comfortable with beachwear and swimwear modeling. Previous modeling experience preferred. Must be available for full day shoot. Professional attitude required.",
                         "$500-800 per day",
-                        "https://example.com/banners/summer-campaign.jpg",
                         user3Id, // Emma Admin
                         0, // Active
                         new DateTime(2025, 4, 1, 9, 0, 0),
@@ -215,7 +214,6 @@ namespace Infrastructure.Migrations
                         new DateTime(2025, 8, 20, 8, 0, 0),
                         "Acting experience required for lead roles. Background actors welcome with no experience. Must be reliable and committed to the full production schedule spanning 3 weeks.",
                         "$200-1500 depending on role",
-                        "https://example.com/banners/indie-film.jpg",
                         user3Id, // Emma Admin
                         0, // Active
                         new DateTime(2025, 5, 10, 14, 30, 0),
@@ -229,7 +227,6 @@ namespace Infrastructure.Migrations
                         new DateTime(2025, 6, 5, 9, 0, 0),
                         "Basic photography knowledge required. Must bring own camera equipment (DSLR or mirrorless). Laptop with Lightroom/Photoshop recommended for editing sessions.",
                         "$150 workshop fee",
-                        "https://example.com/banners/photo-workshop.jpg",
                         user3Id, // Emma Admin
                         0, // Active
                         new DateTime(2025, 3, 20, 11, 15, 0),

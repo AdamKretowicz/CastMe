@@ -15,5 +15,8 @@
         public const string RemoveParticipant = basePath + "/{castingId:guid}/participant/{userId:guid}";
         public const string GetCastingsByParticipantId = basePath + "/participant/{userId:guid}";
         public const string ChangeCastingStatus = basePath + "/{id:guid}/status";
+        public const string GetCastingBanner = basePath + "/{castingId:guid}/banner";
+        public const string UploadCastingBanner = basePath + "/{castingId:guid}/banner";
+        public const string DeleteCastingBanner = basePath + "/{castingId:guid}/banner";
     }
 }

@@ -17,6 +17,7 @@ public class UserDbContext : DbContext
     public DbSet<CastingAssignment> Assignments { get; set; } = null!;
     public DbSet<Experience> Experiences { get; set; } = null!;
     public DbSet<Favourite> Favourites { get; set; } = null!;
+    public DbSet<CastingBanner> CastingBanners { get; set; } = null!;
 
 
 
@@ -36,18 +37,40 @@ public class UserDbContext : DbContext
             entity.HasOne(e => e.Casting)
                 .WithMany(c => c.Assignments)
                 .HasForeignKey(e => e.CastingId)
-                .OnDelete(DeleteBehavior.Cascade); // tylko tu CASCADE
+                .OnDelete(DeleteBehavior.Cascade); 
 
             entity.HasOne(e => e.Role)
                 .WithMany(r => r.Assignments)
                 .HasForeignKey(e => e.RoleId)
-                .OnDelete(DeleteBehavior.NoAction); // brak kaskady
+                .OnDelete(DeleteBehavior.NoAction); 
 
             entity.HasOne(e => e.User)
                 .WithMany(u => u.Assignments)
                 .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.NoAction); // brak kaskady
+                .OnDelete(DeleteBehavior.NoAction); 
+
+
         });
+        modelBuilder.Entity<Casting>()
+            .HasOne(c => c.Banner)
+            .WithOne(b => b.Casting)
+            .HasForeignKey<CastingBanner>(b => b.CastingId);
+
+        modelBuilder.Entity<Favourite>()
+            .HasOne(f => f.Model)
+            .WithMany()
+            .HasForeignKey(f => f.ModelId)
+            .OnDelete(DeleteBehavior.Cascade)
+            .HasConstraintName("FK_Favourites_Users_ModelId");
+
+        modelBuilder.Entity<Favourite>()
+            .HasOne(f => f.Organizer)
+            .WithMany()
+            .HasForeignKey(f => f.OrganizerId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .HasConstraintName("FK_Favourites_Users_OrganizerId");
+
+
     }
 
 

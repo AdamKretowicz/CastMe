@@ -138,6 +138,7 @@ builder.Services.AddScoped<IUserFilterRepository, UserFilterRepository>();
 builder.Services.AddTransient<IExperienceService, ExperienceService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<FavouriteService>();
+builder.Services.AddScoped<ICastingBannerService, CastingBannerService>();
 
 
 

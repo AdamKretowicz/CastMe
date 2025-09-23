@@ -1,4 +1,6 @@
 ﻿using Application.Dtos;
+using Application.Dtos.Photo;
+using Application.Interfaces;
 using Application.Mapper;
 using CastMe.Domain.Entities;
 using CastMe.UserApi.Services;
@@ -20,16 +22,15 @@ namespace WebApi.Controllers
         private readonly CastingService _castingService;
         private readonly UserService _userService;
         private readonly ILogger<CastingController> _logger;
+        private readonly ICastingBannerService _castingBannerService;
 
-        public CastingController(CastingService castingService, UserService userService, ILogger<CastingController> logger)
+        public CastingController(CastingService castingService, UserService userService, ILogger<CastingController> logger, ICastingBannerService castingBannerService)
         {
             _castingService = castingService;
             _userService = userService;
             _logger = logger;
+            _castingBannerService = castingBannerService;
         }
-
-
-
 
         ///<summary>Get all castings.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetAll)]
@@ -214,5 +215,73 @@ namespace WebApi.Controllers
 
 
         }
+
+        [HttpGet(Endpoints.CastingEndpoints.GetCastingBanner)]
+        [ProducesResponseType(typeof(CastingBannerDto), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        public async Task<IActionResult> GetCastingBanner(Guid castingId)
+        {
+
+
+            try
+            {
+                var banner = await _castingBannerService.GetBannerAsync(castingId);
+                if (banner == null)
+                {
+                    return NotFound(new { message = "No banner found for this casting." });
+                }
+                return Ok(banner);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to get casting banner. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost(Endpoints.CastingEndpoints.UploadCastingBanner)]
+        [ProducesResponseType(typeof(CastingBannerDto), 201)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [Consumes("multipart/form-data")]
+        [RoleAuthorize("Admin")]
+
+        public async Task<IActionResult> UploadCastingBanner([FromRoute] Guid castingId, [FromForm] UploadPhotoForm form)
+        {
+            if (form.File is null || form.File.Length == 0)
+                return BadRequest("No file provided.");
+            try
+            {
+                var banner = await _castingBannerService.SaveBanerAsync(castingId, form.File);
+                return CreatedAtAction(nameof(GetCastingBanner), new { castingId }, banner);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to upload casting banner. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+
+        [HttpDelete(Endpoints.CastingEndpoints.DeleteCastingBanner)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> DeleteCastingBanner([FromRoute] Guid castingId)
+        {
+            try
+            {
+                await _castingBannerService.DeleteBannerAsync(castingId);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to delete casting banner. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+
     }
 }

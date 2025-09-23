@@ -1,4 +1,5 @@
 ﻿using Application.Dtos;
+using Application.Dtos.Photo;
 using CastMe.Domain.Entities;
 using Domain.Entities;
 using System;
@@ -23,7 +24,6 @@ namespace Application.Mapper
             EventDate = casting.EventDate,
             Requirements = casting.Requirements,
             Compensation = casting.Compensation,
-            BannerUrl = casting.BannerUrl,
             OrganizerId = casting.OrganizerId,
             Status = casting.Status,
             CreatedAt = casting.CreatedAt,
@@ -35,6 +35,7 @@ namespace Application.Mapper
                 AcceptedCount = r.AcceptedCount
             }).ToList(),
             Tags = casting.Tags.Select(t => t.Value).ToList(),
+           
         };
 
 
@@ -49,7 +50,6 @@ namespace Application.Mapper
                 EventDate = dto.EventDate,
                 Requirements = dto.Requirements,
                 Compensation = dto.Compensation,
-                BannerUrl = dto.BannerUrl,
                 UpdatedAt = DateTime.UtcNow.Date,
             };
             // Mapowanie ról
@@ -75,7 +75,6 @@ namespace Application.Mapper
             casting.EventDate = dto.EventDate;
             casting.Requirements = dto.Requirements;
             casting.Compensation = dto.Compensation;
-            casting.BannerUrl = dto.BannerUrl;
             casting.Status = dto.Status;
             casting.UpdatedAt = DateTime.UtcNow.Date;
             // Aktualizacja ról
@@ -104,6 +103,23 @@ namespace Application.Mapper
             CastingId = casting.Id,
             Participants = casting.Assignments.ToDictionary(a => a.UserId.ToString(), a => a.Role.Name)
         };
+
+        // ENTITY -> READ DTO CastingBanner
+
+        public static CastingBannerDto ToBannerDto(this CastingBanner banner) => new CastingBannerDto
+        {
+            Id = banner.Id,
+            Url = banner.Url,
+            ContentType = banner.ContentType,
+            SizeBytes = banner.SizeBytes,
+            FileName = banner.FileName,
+            OriginalFileName = banner.OriginalFileName,
+            CreatedAtUtc = banner.CreatedAtUtc
+
+
+        };
+
+
 
 
     }

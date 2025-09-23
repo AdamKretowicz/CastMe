@@ -106,10 +106,6 @@ namespace Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("BannerUrl")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<string>("Compensation")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -177,6 +173,45 @@ namespace Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("CastingAssignments", "Casting");
+                });
+
+            modelBuilder.Entity("Domain.Entities.CastingBanner", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CastingId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CastingId")
+                        .IsUnique();
+
+                    b.ToTable("CastingBanners");
                 });
 
             modelBuilder.Entity("Domain.Entities.CastingRole", b =>
@@ -266,6 +301,30 @@ namespace Infrastructure.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Experiences", "User");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Favourite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ModelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OrganizerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ModelId");
+
+                    b.HasIndex("OrganizerId");
+
+                    b.ToTable("Favourites", "User");
                 });
 
             modelBuilder.Entity("Domain.Entities.Photo", b =>
@@ -365,6 +424,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.CastingBanner", b =>
+                {
+                    b.HasOne("Domain.Entities.Casting", "Casting")
+                        .WithOne("Banner")
+                        .HasForeignKey("Domain.Entities.CastingBanner", "CastingId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Casting");
+                });
+
             modelBuilder.Entity("Domain.Entities.CastingRole", b =>
                 {
                     b.HasOne("Domain.Entities.Casting", "Casting")
@@ -398,6 +468,27 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Favourite", b =>
+                {
+                    b.HasOne("CastMe.Domain.Entities.User", "Model")
+                        .WithMany()
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_Favourites_Users_ModelId");
+
+                    b.HasOne("CastMe.Domain.Entities.User", "Organizer")
+                        .WithMany()
+                        .HasForeignKey("OrganizerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_Favourites_Users_OrganizerId");
+
+                    b.Navigation("Model");
+
+                    b.Navigation("Organizer");
+                });
+
             modelBuilder.Entity("Domain.Entities.Photo", b =>
                 {
                     b.HasOne("CastMe.Domain.Entities.User", "User")
@@ -421,6 +512,9 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Casting", b =>
                 {
                     b.Navigation("Assignments");
+
+                    b.Navigation("Banner")
+                        .IsRequired();
 
                     b.Navigation("Roles");
 
