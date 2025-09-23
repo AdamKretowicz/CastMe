@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, Users, Camera, Star, Shield } from "lucide-react";
 import Button from "../components/UI/Button";
+import { useAuth } from "../context/AuthContext";
 
 function HomePage() {
+  const { currentUser } = useAuth(); // sprawdzamy, czy ktoś jest zalogowany
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -18,7 +20,7 @@ function HomePage() {
               artystów, którzy już znaleźli swoją drogę do sukcesu.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register">
+              <Link to={currentUser ? "/dashboard" : "/register"}>
                 <Button
                   size="lg"
                   className="px-8 py-4 text-lg cursor-pointer
@@ -28,14 +30,16 @@ function HomePage() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Button
-                variant="outline"
-                size="lg"
-                className="px-8 py-4 text-lg self-center cursor-pointer
+              <Link to="/about">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="px-8 py-4 text-lg self-center cursor-pointer
 "
-              >
-                Dowiedz się więcej
-              </Button>
+                >
+                  Dowiedz się więcej
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -142,7 +146,7 @@ function HomePage() {
           <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
             Dołącz do CastMe już dziś i odkryj nowe możliwości w swojej karierze
           </p>
-          <Link to="/register">
+          <Link to={currentUser ? "/dashboard" : "/register"}>
             <Button
               size="lg"
               className="px-8 py-4 text-lg bg-[#EA1A62] hover:bg-[#d1185a] cursor-pointer
