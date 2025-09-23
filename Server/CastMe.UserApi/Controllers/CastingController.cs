@@ -74,7 +74,11 @@ namespace WebApi.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            var casting = dto.ToEntity();
+            string userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+
+            var organiserId = Guid.Parse(userIdClaim);
+
+            var casting = dto.ToEntity(organiserId);
             await _castingService.Add(casting);
             return CreatedAtAction(nameof(GetById), new { id = casting.Id }, casting.ToReadDto());
         }

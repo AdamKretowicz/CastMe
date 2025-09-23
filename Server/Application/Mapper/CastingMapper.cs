@@ -40,7 +40,7 @@ namespace Application.Mapper
 
 
         // CREATE DTO -> ENTITY
-        public static Casting ToEntity(this CastingDto.Create dto)
+        public static Casting ToEntity(this CastingDto.Create dto, Guid organiserId)
         {
             var casting = new Casting
             {
@@ -51,6 +51,7 @@ namespace Application.Mapper
                 Requirements = dto.Requirements,
                 Compensation = dto.Compensation,
                 UpdatedAt = DateTime.UtcNow.Date,
+                OrganizerId = organiserId,
             };
             // Mapowanie ról
             casting.Roles = dto.Roles.Select(r => new CastingRole

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using WebApi.Extensions;
 using WebApi.Services;
 
 namespace WebApi.Controllers
@@ -8,7 +9,7 @@ namespace WebApi.Controllers
     [Route("favourites")]
     [Tags("Favourite")]
     [Produces("application/json")]
-    [Authorize(Roles = "Admin")]
+    [RoleAuthorize("Admin")]
     public class FavouriteController : ControllerBase
     {
         private readonly FavouriteService _service;
