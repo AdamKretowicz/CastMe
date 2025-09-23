@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useCasting } from "../../context/CastingContext";
 import {
@@ -13,6 +13,7 @@ import {
 import Card from "../UI/Card";
 import Button from "../UI/Button";
 import Input from "../UI/Input";
+import { apiFetch } from "../../utils/api";
 
 const ALL_ROLES = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
 
@@ -48,6 +49,8 @@ const OrganizerDashboard = () => {
   const organizerCastings = castings.filter(
     (c) => c.organizerId === currentUser.id
   );
+  console.log("castings from context:", castings);
+  console.log("currentUser in OrganizerDashboard:", currentUser);
 
   const selectedRoleNames = useMemo(
     () => formData.roles.map((r) => r.role).filter(Boolean),
@@ -251,6 +254,28 @@ const OrganizerDashboard = () => {
   };
 
   const formatDate = (d) => new Date(d).toLocaleDateString("pl-PL");
+
+  const handleUpdateStatus = async (applicationId, newStatus) => {
+    if (!selectedCasting) return;
+    try {
+      await apiFetch(
+        `/casting/casting/${applicationId}/status?castingId=${selectedCasting.id}&status=${newStatus}`,
+        { method: "GET" } // według Swaggera zmiana statusu jest na GET
+      );
+
+      // Odśwież zgłoszenia po akcji – np. wywołaj contextową funkcję
+      await getCastingApplications(selectedCasting.id);
+
+      alert(
+        newStatus === "accepted"
+          ? "Zgłoszenie zaakceptowane"
+          : "Zgłoszenie odrzucone"
+      );
+    } catch (err) {
+      console.error("Błąd przy zmianie statusu:", err);
+      alert("Nie udało się zmienić statusu zgłoszenia");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -700,6 +725,37 @@ const OrganizerDashboard = () => {
                             className="border border-gray-200 rounded-lg p-4"
                           >
                             <div className="flex items-center justify-between mb-3">
+                              {application.status === "pending" && (
+                                <div className="flex space-x-2 mt-3">
+                                  <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleUpdateStatus(
+                                        application.id,
+                                        "accepted"
+                                      )
+                                    }
+                                    className="flex-1"
+                                  >
+                                    <CheckCircle className="w-4 h-4 mr-1" />
+                                    Akceptuj
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() =>
+                                      handleUpdateStatus(
+                                        application.id,
+                                        "rejected"
+                                      )
+                                    }
+                                    className="flex-1"
+                                  >
+                                    <XCircle className="w-4 h-4 mr-1" />
+                                    Odrzuć
+                                  </Button>
+                                </div>
+                              )}
+
                               <div className="flex items-center">
                                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
                                   <Users className="w-4 h-4 text-gray-600" />
