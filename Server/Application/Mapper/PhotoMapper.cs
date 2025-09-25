@@ -26,9 +26,12 @@ namespace Application.Mapper
                 Order = photo.Order
             };
 
+        }
 
-
-
+        public static Photo PhotoDtoUpdate(this Photo photo, PhotoDtoUpdate dto)
+        {
+            photo.IsActive = dto.IsActive;
+            return photo;
         }
     }
 }

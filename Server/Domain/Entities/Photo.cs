@@ -22,5 +22,7 @@ namespace Domain.Entities
         public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
         public User? User { get; set; }
+
+        public bool IsActive { get; set; } = false;
     }
 }

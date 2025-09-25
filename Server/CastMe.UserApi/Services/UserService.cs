@@ -27,7 +27,7 @@ namespace CastMe.UserApi.Services
             .Include(u => u.Role)
             .AsNoTracking().ToListAsync();
         public async Task<IEnumerable<Domain.Entities.User>> GetAllUsers(UserStatus status) =>
-            await _context.Users.Where(s => s.Status == status).Include(u => u.Role).AsNoTracking().ToListAsync();
+            await _context.Users.Where(s => s.Status == status).Include(u => u.Role).Include(u => u.Photos).AsNoTracking().ToListAsync();
 
         public async Task<Domain.Entities.User?> GetById(Guid id) =>
             await _context.Users.AsNoTracking().Include(u => u.Role).FirstOrDefaultAsync(u => u.Id == id);
