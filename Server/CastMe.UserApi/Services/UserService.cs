@@ -44,6 +44,11 @@ namespace CastMe.UserApi.Services
         {
             var entity = _context.Users.FirstOrDefault(u => u.Id == userId);
 
+            if (entity == null)
+            {
+                throw new Exception("User not found");
+            }
+
             entity.UpdateEntity(updateUser);
 
             //_context.Users.Update(entity);

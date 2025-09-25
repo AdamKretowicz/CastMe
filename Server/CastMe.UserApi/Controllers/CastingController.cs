@@ -74,9 +74,17 @@ namespace WebApi.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
-            string userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
+            string? userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
 
-            var organiserId = Guid.Parse(userIdClaim);
+            if (string.IsNullOrEmpty(userIdClaim))
+            {
+                throw new Exception("User ID not found in token.");
+            }
+
+            if (!Guid.TryParse(userIdClaim, out Guid organiserId))
+            {
+                throw new Exception("Invalid user ID in token.");
+            };
 
             var casting = dto.ToEntity(organiserId);
             await _castingService.Add(casting);
@@ -97,7 +105,7 @@ namespace WebApi.Controllers
             if (existingCasting is null) return NotFound();
 
             existingCasting.UpdateEntity(dto);
-            await _castingService.Update(existingCasting);
+            await _castingService.Update(dto, id);
             return Ok(existingCasting.ToReadDto());
         }
         ///<summary>Delete casting by Id.</summary>

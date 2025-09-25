@@ -70,6 +70,7 @@ namespace Application.Mapper
         // UPDATE DTO -> ENTITY
         public static void UpdateEntity(this Casting casting, CastingDto.Update dto)
         {
+
             casting.Title = dto.Title;
             casting.Description = dto.Description;
             casting.Location = dto.Location;

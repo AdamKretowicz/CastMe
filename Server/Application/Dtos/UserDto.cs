@@ -1,4 +1,6 @@
-﻿using CastMe.Domain.Entities;
+﻿using Application.Dtos.Photo;
+using CastMe.Domain.Entities;
+using Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using System.ComponentModel.DataAnnotations;
 
@@ -67,6 +69,7 @@ namespace CastMe.User.CrossCutting.DTOs
             public string? Description { get; set; }
 
             public string Role { get; set; } = default!;
+            public PhotoDto? MainPhoto { get; set; } = default!;
         }
 
         public class Update

@@ -1,7 +1,9 @@
-﻿using CastMe.Domain.Entities;
+﻿using Application.Dtos;
+using CastMe.Domain.Entities;
 using Domain.Entities;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using Application.Mapper;
 
 namespace WebApi.Services
 {
@@ -13,10 +15,18 @@ namespace WebApi.Services
 
 
         public async Task<IEnumerable<Domain.Entities.Casting>> GetAllCastings() =>
-            await _context.Castings.AsNoTracking().ToListAsync();
+            await _context.Castings
+            .Include(c=> c.Roles)
+            .Include(c => c.Tags)
+            .AsNoTracking()
+            .ToListAsync();
 
         public async Task<Domain.Entities.Casting?> GetById(Guid id) =>
-            await _context.Castings.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id);
+            await _context.Castings
+            .Include(c => c.Roles)
+            .Include(c => c.Tags)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         public async Task Add(Domain.Entities.Casting entity)
         {
@@ -24,9 +34,21 @@ namespace WebApi.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task Update(Domain.Entities.Casting entity)
+        public async Task Update(CastingDto.Update dto, Guid castingId)
         {
-            _context.Castings.Update(entity);
+            var casting = await _context.Castings
+                .Where(c => c.Id == castingId)
+                .FirstOrDefaultAsync();
+
+            if (casting == null)
+            {
+                throw new Exception("Casting not found");
+            }
+
+                casting.UpdateEntity(dto);
+
+
+            //_context.Castings.Update(entity);
             await _context.SaveChangesAsync();
         }
 
@@ -39,7 +61,12 @@ namespace WebApi.Services
         }
 
         public async Task<IEnumerable<Domain.Entities.Casting>> GetCastingsByOrganiserId(Guid userId) =>
-            await _context.Castings.AsNoTracking().Where(c => c.OrganizerId == userId).ToListAsync();
+            await _context.Castings
+            .Include(c => c.Roles)
+            .Include(c => c.Tags)
+            .AsNoTracking()
+            .Where(c => c.OrganizerId == userId)
+            .ToListAsync();
 
 
         public async Task<Casting> GetParticipantsByCastingId(Guid castingId) =>
@@ -92,6 +119,8 @@ namespace WebApi.Services
 
         public async Task<IEnumerable<Domain.Entities.Casting>> GetAllCastingsByUserId(Guid userId) =>
             await _context.Castings
+            .Include(c => c.Roles)
+            .Include(c => c.Tags)
             .Where(c => c.Assignments.Any(a => a.UserId == userId))
             .ToListAsync();
 

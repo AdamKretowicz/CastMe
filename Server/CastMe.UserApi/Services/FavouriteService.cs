@@ -32,8 +32,8 @@ namespace WebApi.Services
             if (model == null)
                 throw new KeyNotFoundException("Model nie istnieje.");
 
-            if (!string.Equals(model.Role?.Name, "Model", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Podany użytkownik nie jest modelem.");
+            //if (!string.Equals(model.Role?.Name, "Model", StringComparison.OrdinalIgnoreCase))
+            //    throw new InvalidOperationException("Podany użytkownik nie jest modelem.");
 
             var exists = await _db.Favourites.AnyAsync(f => f.OrganizerId == organizerId && f.ModelId == modelId);
             if (exists) return;

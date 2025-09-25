@@ -303,7 +303,11 @@ namespace CastMe.UserApi.Controllers
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer", "Guest")]
         public async Task<IActionResult> FilterUsers([FromQuery] ModelFilterDto filter, [FromQuery] int pageNumber, [FromQuery] int pageSize)
         {
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 10;
+
             var users = await _userFilter.GetFilteredAsync(filter,pageNumber,pageSize);
+
             return Ok(users.Select(u => u.ToReadDto()));
         }
 

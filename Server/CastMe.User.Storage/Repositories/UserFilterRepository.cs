@@ -20,7 +20,9 @@ namespace Infrastructure.Repositories
 
         public async Task<List<User>> GetFilteredAsync(ModelFilterDto filter,int pagenumber = 1, int pageSize = 10, CancellationToken ct = default)
         {
-            IQueryable<User> query = _context.Users.AsNoTracking();
+            IQueryable<User> query = _context.Users.Include(u => u.Photos).Include(u => u.Role).AsNoTracking();
+
+            query = query.Where(u => !string.Equals(u.Role.Name, "Admin"));
 
             // --- Filtrowanie liczbowe ---
             if (filter.MinAge.HasValue)
