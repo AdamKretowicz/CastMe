@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import { Camera, User, Home, Info, Mail, MoreHorizontal, Heart, LayoutDashboard  } from "lucide-react";
+import { Camera, User, Home, Info, Mail, MoreHorizontal, Heart, LayoutDashboard, Users  } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useState, useEffect } from "react";
 
@@ -30,6 +30,7 @@ const Header = () => {
   const navLinks = currentUser
     ? [
         { to: "/dashboard", label: "Dashboard" , icon: <LayoutDashboard  className="w-5 h-5" />},
+        { to: "/filterUsers", label: "Użytkownicy" , icon: <Users  className="w-5 h-5" />},
         { to: "/castings", label: "Castingi", icon: <Camera className="w-5 h-5" /> },
         { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
         ...(currentUser.role === "Admin"
@@ -40,8 +41,8 @@ const Header = () => {
         { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
         { to: "/about", label: "O nas", icon: <Info className="w-4 h-4" /> },
         { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
-        { to: "/login", label: "Logowanie" },
-        { to: "/register", label: "Rejestracja" },
+        // { to: "/login", label: "Logowanie" },
+        // { to: "/register", label: "Rejestracja" },
       ];
 
   return (
@@ -58,7 +59,7 @@ const Header = () => {
           </Link>
 
           {/* Center - Nav Links */}
-          <div className="flex-1 flex justify-center">
+          <div className="flex-1 flex justify-end mr-[7%]">
             {isLarge ? (
               <nav className="flex space-x-4">
                 {navLinks.map((link) => (

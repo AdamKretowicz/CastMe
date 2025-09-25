@@ -249,12 +249,13 @@ const ModelDashboard = () => {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {casting.roles.map((role) => (
+                          {/* Roles */}
+                          {casting.roles.map((roleObj, index) => (
                             <span
-                              key={role}
+                              key={`${roleObj.role}-${index}`} // unique string key
                               className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                             >
-                              {role}
+                              {roleObj.role} ({roleObj.acceptedCount}/{roleObj.capacity})
                             </span>
                           ))}
                         </div>
@@ -266,14 +267,16 @@ const ModelDashboard = () => {
 
                       {casting.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {casting.tags.map((tag) => (
+                          {/* Tags */}
+                          {casting.tags.map((tagObj, index) => (
                             <span
-                              key={tag}
+                              key={`${tagObj.name}-${index}`} // unique string key
                               className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
                             >
-                              {tag}
+                              {tagObj.name}
                             </span>
                           ))}
+
                         </div>
                       )}
 
