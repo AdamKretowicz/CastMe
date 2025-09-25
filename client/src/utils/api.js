@@ -417,3 +417,42 @@ export const filterUsers = async (filters, accessToken) => {
   };
 };
 
+export async function fetchPendingUsers(token) {
+  const response = await fetch(`${API_BASE_URL}/user/Pending`, {
+    method: "GET",
+    headers: {
+      "Accept": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to fetch pending users");
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+export async function updateUserStatus(userId, status, token) {
+  const response = await fetch(`${API_BASE_URL}/user/${userId}/statusUpdate`, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json-patch+json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Failed to update status for user ${userId}`);
+  }
+
+  return response.json();
+}
+
+
+

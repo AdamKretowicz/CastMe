@@ -14,6 +14,7 @@ import EditProfilePage from "./Pages/EditProfilePage";
 import FavoritesPage from "./Pages/FavoritesPage";
 import ProfileFilterPage from "./Pages/ProfileFilterPage";
 import { FilterProvider } from "./context/FilterProvider";
+import StatusUpdatePage from "./Pages/StatusUpdatePage";
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
                   <Route path="/edit-profile" element={<EditProfilePage />} />
                   <Route path="/favorites" element={<FavoritesPage />} />
                   <Route path="/filterUsers" element={<ProfileFilterPage />} />
+                  <Route path="/pending-accounts" element={<StatusUpdatePage />} />
                 </Routes>
               </main>
               <Footer />
