@@ -353,3 +353,67 @@ export const fetchUserRoles = async (accessToken) => {
     throw error;
   }
 };
+
+
+// Filter users
+export const filterUsers = async (filters, accessToken) => {
+  const queryParams = new URLSearchParams();
+  
+  // Simple filters
+  if (filters.minAge) queryParams.append("MinAge", filters.minAge);
+  if (filters.maxAge) queryParams.append("MaxAge", filters.maxAge);
+  if (filters.minHeight) queryParams.append("MinHeight", filters.minHeight);
+  if (filters.maxHeight) queryParams.append("MaxHeight", filters.maxHeight);
+  if (filters.minWeight) queryParams.append("MinWeight", filters.minWeight);
+  if (filters.maxWeight) queryParams.append("MaxWeight", filters.maxWeight);
+
+  // Array filters – append each value separately
+  if (filters.hairColors?.length) {
+    filters.hairColors.forEach(color => queryParams.append("HairColor", color));
+  }
+  if (filters.clothingSizes?.length) {
+    filters.clothingSizes.forEach(size => queryParams.append("ClothingSize", size));
+  }
+  if (filters.cities?.length) {
+    filters.cities.forEach(city => queryParams.append("City", city));
+  }
+
+  // Pagination
+  queryParams.append("pageNumber", filters.pageNumber || 1);
+  queryParams.append("pageSize", filters.pageSize || 12);
+
+  const response = await fetch(
+    `${API_BASE_URL}/FilterUsers?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch filtered users");
+  }
+
+  const data = await response.json();
+
+  return {
+    users: Array.isArray(data) ? data : data.users || data.items || [],
+    totalCount:
+      data.totalCount ||
+      data.total ||
+      (Array.isArray(data) ? data.length : 0),
+    currentPage: data.currentPage || data.page || filters.pageNumber || 1,
+    totalPages:
+      data.totalPages ||
+      Math.ceil(
+        (data.totalCount ||
+          data.total ||
+          (Array.isArray(data) ? data.length : 0)) /
+          (filters.pageSize || 12)
+      ),
+  };
+};
+
