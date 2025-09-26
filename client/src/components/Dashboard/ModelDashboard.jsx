@@ -4,7 +4,6 @@ import { apiFetch } from "../../utils/api";
 import {
   Calendar,
   MapPin,
-  Users,
   Clock,
   CheckCircle,
   XCircle,
@@ -13,6 +12,49 @@ import {
 import Card from "../UI/Card";
 import Button from "../UI/Button";
 
+/**
+ * Mapowanie numerycznych enumów ról z API na nazwy w języku angielskim
+ */
+const roleEnumMap = {
+  0: "Model",
+  1: "Photographer",
+  2: "Designer",
+  3: "Volunteer",
+};
+
+/**
+ * Mapowanie z wartości API (EN/enum) → etykiety UI (PL)
+ */
+const roleDisplayMap = {
+  // Stringowe nazwy
+  Model: "Model",
+  Photographer: "Fotograf",
+  Designer: "Projektant",
+  Volunteer: "Wolontariusz",
+
+  // Numeryczne enumy (fallback)
+  0: "Model",
+  1: "Fotograf",
+  2: "Projektant",
+  3: "Wolontariusz",
+};
+
+/**
+ * Funkcja pomocnicza do normalizacji nazwy roli
+ */
+const getRoleDisplayName = (role) => {
+  // Jeśli role jest numerem, najpierw spróbuj zmapować na angielską nazwę
+  if (typeof role === "number") {
+    const englishName = roleEnumMap[role];
+    return (
+      roleDisplayMap[englishName] || roleDisplayMap[role] || `Rola ${role}`
+    );
+  }
+
+  // Jeśli role jest stringiem, bezpośrednio mapuj na polską nazwę
+  return roleDisplayMap[role] || role;
+};
+
 const ModelDashboard = () => {
   const { currentUser } = useAuth();
   const [castings, setCastings] = useState([]);
@@ -20,7 +62,6 @@ const ModelDashboard = () => {
   const [error, setError] = useState(null);
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
-  // Zgłoszenia użytkownika z API
   const [userApplications, setUserApplications] = useState([]);
 
   useEffect(() => {
@@ -38,7 +79,6 @@ const ModelDashboard = () => {
     fetchCastings();
   }, []);
 
-  // Pobierz zgłoszenia użytkownika z API
   useEffect(() => {
     if (!currentUser) return;
     const fetchApplications = async () => {
@@ -47,12 +87,10 @@ const ModelDashboard = () => {
           `/casting/casting/participants/${currentUser.id}`
         );
         setUserApplications(data);
-        // DEBUG: wypisz currentUser.id i odpowiedź z backendu
         console.log("currentUser.id:", currentUser.id);
         console.log("userApplications (response):", data);
       } catch (err) {
         console.error("Błąd pobierania zgłoszeń użytkownika:", err);
-        // Możesz dodać obsługę błędu jeśli chcesz
       }
     };
     fetchApplications();
@@ -101,7 +139,6 @@ const ModelDashboard = () => {
     }
   };
 
-  // Obsługa zgłoszenia do castingu przez API
   const handleApply = async (castingId) => {
     try {
       await apiFetch(
@@ -110,7 +147,6 @@ const ModelDashboard = () => {
           method: "POST",
         }
       );
-      // Po wysłaniu zgłoszenia odśwież listę zgłoszeń
       const data = await apiFetch(
         `/casting/casting/participants/${currentUser.id}`
       );
@@ -124,7 +160,6 @@ const ModelDashboard = () => {
     }
   };
 
-  // Sprawdzanie czy użytkownik już się zgłosił
   const hasApplied = (castingId) => {
     return userApplications.some((app) => app.id === castingId);
   };
@@ -224,7 +259,7 @@ const ModelDashboard = () => {
                       className="border border-gray-200 rounded-lg p-6"
                     >
                       <div className="flex justify-between items-start mb-4">
-                        <div>
+                        <div className="flex-1">
                           <h3 className="text-lg font-semibold text-[#2B2628] mb-2">
                             {casting.title}
                           </h3>
@@ -234,29 +269,31 @@ const ModelDashboard = () => {
                               {casting.location}
                             </div>
                             <div className="flex items-center">
-                              <Users className="w-4 h-4 mr-1" />
-                              {casting.maxPlaces} miejsc
-                            </div>
-                            <div className="flex items-center">
                               <Calendar className="w-4 h-4 mr-1" />
-                              Do: {formatDate(casting.deadline)}
+                              {formatDate(casting.eventDate)}
                             </div>
                           </div>
-                          {casting.salary && (
-                            <div className="text-sm font-medium text-[#EA1A62] mb-3">
-                              Wynagrodzenie: {casting.salary}
+
+                          {/* Role with counts - NOWA SEKCJA */}
+                          {casting.roles && casting.roles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {casting.roles.map((role, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                                >
+                                  {getRoleDisplayName(role.role)}{" "}
+                                  {role.acceptedCount || 0}/{role.capacity}
+                                </span>
+                              ))}
                             </div>
                           )}
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {casting.roles.map((role) => (
-                            <span
-                              key={role}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                            >
-                              {role}
-                            </span>
-                          ))}
+
+                          {casting.compensation && (
+                            <div className="text-sm font-medium text-[#EA1A62] mb-3">
+                              Wynagrodzenie: {casting.compensation}
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -264,11 +301,11 @@ const ModelDashboard = () => {
                         {casting.description}
                       </p>
 
-                      {casting.tags.length > 0 && (
+                      {casting.tags && casting.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {casting.tags.map((tag) => (
+                          {casting.tags.map((tag, idx) => (
                             <span
-                              key={tag}
+                              key={idx}
                               className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
                             >
                               {tag}

@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { useAuth } from "../../context/AuthContext";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useCasting } from "../../context/CastingContext";
 import {
   Plus,
@@ -10,6 +9,7 @@ import {
   AlertCircle,
   X,
   Calendar,
+  ImageOff,
 } from "lucide-react";
 import Card from "../UI/Card";
 import Button from "../UI/Button";
@@ -18,14 +18,7 @@ import { apiFetch } from "../../utils/api";
 
 const ALL_ROLES = ["Model", "Fotograf", "Projektant", "Wolontariusz"];
 
-/**
- * Backend oczekuje enumów ról w PascalCase (EN):
- *  - "Model"
- *  - "Photographer"
- *  - "Designer"
- *  - "Volunteer"
- * Dlatego mapujemy z polskich etykiet UI → wartości akceptowane przez API.
- */
+// UI (PL) -> API (EN)
 const roleMap = {
   Model: "Model",
   Fotograf: "Photographer",
@@ -33,40 +26,205 @@ const roleMap = {
   Wolontariusz: "Volunteer",
 };
 
+// API (EN) -> UI (PL)
+const roleDisplayMap = {
+  Model: "Model",
+  Photographer: "Fotograf",
+  Designer: "Projektant",
+  Volunteer: "Wolontariusz",
+};
+
+/** Absolutny URL do pliku (Swagger zwraca np. "/uploads/...") */
+const API_BASE =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  (typeof window !== "undefined" ? window.location.origin : "");
+const toAbsoluteUrl = (u) => {
+  if (!u) return "";
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+};
+const bust = (url) =>
+  !url ? "" : `${url}${url.includes("?") ? "&" : "?"}v=${Date.now()}`;
+
+/** Trwały cache w localStorage — żeby bannery nie znikały po przeładowaniu */
+const BANNERS_STORAGE_KEY = "castingBannerUrls";
+
+const readBannerCache = () => {
+  try {
+    const raw = localStorage.getItem(BANNERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeBannerCache = (obj) => {
+  try {
+    localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(obj));
+  } catch {}
+};
+
+/** Komponent bannera: pełne pole (16:9), właściwy obraz bez zniekształceń (object-contain),
+ *  a puste przestrzenie wypełnia rozmyte tło z tego samego obrazka.
+ */
+const BannerImage = ({ src, alt = "", className = "" }) => {
+  if (!src) {
+    return (
+      <div
+        className={`relative w-full aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center ${className}`}
+      >
+        <span className="text-gray-400 text-sm">Brak bannera</span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`relative w-full aspect-[16/9] rounded-lg overflow-hidden ${className}`}
+    >
+      {/* Rozmyte tło wypełniające pole */}
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-center bg-cover"
+        style={{
+          backgroundImage: `url(${src})`,
+          filter: "blur(16px)",
+          transform: "scale(1.1)",
+          opacity: 0.45,
+        }}
+      />
+      {/* Właściwy obraz – zawsze cały, bez przycięcia i zniekształceń */}
+      <img
+        src={src}
+        alt={alt}
+        className="absolute inset-0 w-full h-full object-contain"
+        loading="lazy"
+      />
+    </div>
+  );
+};
+
+/** Placeholder używany na kartach, gdy brak obrazka lub błąd */
+const BannerPlaceholder = ({ text = "Casting bez bannera" }) => (
+  <div className="relative w-full aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center justify-center">
+    <ImageOff className="w-8 h-8 text-gray-400 mb-2" />
+    <span className="text-gray-500 text-sm">{text}</span>
+  </div>
+);
+
 const OrganizerDashboard = () => {
-  const { currentUser } = useAuth();
-  const { castings, createCasting, getCastingApplications } = useCasting();
+  const { castings, createCasting, getCastingApplications, isLoading } =
+    useCasting();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCasting, setSelectedCasting] = useState(null);
+
+  /** cache URL-i bannerów: { [castingId]: string|null|undefined }
+   *  undefined -> jeszcze nie próbowaliśmy pobrać
+   *  null      -> banner nie istnieje (404) lub błąd pobierania
+   *  string    -> absolutny URL do obrazka
+   */
+  const [castingBanners, setCastingBanners] = useState({});
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     requirements: "",
     location: "",
-    compensation: "", // opcjonalne – pokaż po kliknięciu plusa
+    compensation: "",
     tags: "",
-    roles: [{ role: "Model", capacity: "" }], // Model zawsze
+    roles: [{ role: "Model", capacity: "" }],
     deadline: "",
-    bannerFile: null, // 1 plik (na razie tylko UI)
+    bannerFile: null,
   });
 
   const [showCompensation, setShowCompensation] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const organizerCastings = castings.filter(
-    (c) => c.organizerId === currentUser.id
-  );
-  console.log("castings from context:", castings);
-  console.log("currentUser in OrganizerDashboard:", currentUser);
+  /** Stabilna lista castingów */
+  const organizerCastings = useMemo(() => {
+    const arr = Array.isArray(castings) ? [...castings] : [];
+    // sort: createdAt DESC (fallback: eventDate DESC)
+    arr.sort((a, b) => {
+      const ad = new Date(a?.createdAt || a?.eventDate || 0).getTime();
+      const bd = new Date(b?.createdAt || b?.eventDate || 0).getTime();
+      return bd - ad;
+    });
+    return arr;
+  }, [castings]);
+
+  /** 1) Wczytaj cache bannerów z localStorage na starcie */
+  useEffect(() => {
+    setCastingBanners((prev) => ({ ...readBannerCache(), ...prev }));
+  }, []);
+
+  /** 2) Zapisuj cache przy każdej zmianie */
+  useEffect(() => {
+    writeBannerCache(castingBanners);
+  }, [castingBanners]);
+
+  /** 3) Helper: pobierz banner pojedynczego castingu i zapisz w cache */
+  const fetchBannerFor = useCallback(async (castingId) => {
+    if (!castingId) return;
+    try {
+      const res = await apiFetch(`/casting/casting/${castingId}/banner`, {
+        method: "GET",
+      });
+      const absUrl = toAbsoluteUrl(res?.url);
+      setCastingBanners((prev) => {
+        const next = { ...prev, [castingId]: absUrl || null };
+        writeBannerCache(next);
+        return next;
+      });
+    } catch (err) {
+      // Ustaw null przy 404 lub dowolnym błędzie – unikamy wiszącego "Ładowanie…"
+      setCastingBanners((prev) => {
+        const next = { ...prev, [castingId]: null };
+        writeBannerCache(next);
+        return next;
+      });
+      if (err?.status !== 404) {
+        console.error("Banner fetch error for", castingId, err);
+      }
+    }
+  }, []);
+
+  /** 4) Po otrzymaniu listy castingów dociągnij brakujące bannery */
+  useEffect(() => {
+    if (!organizerCastings?.length) return;
+
+    // Prefill (na przyszłość, gdyby backend dodał pole w samym castingu)
+    setCastingBanners((prev) => {
+      const next = { ...prev };
+      organizerCastings.forEach((c) => {
+        const inlineUrl =
+          c.bannerUrl || c.banner?.url || c.bannerPath || c.banner;
+        if (inlineUrl && next[c.id] == null) {
+          next[c.id] = toAbsoluteUrl(inlineUrl);
+        }
+      });
+      return next;
+    });
+
+    // Dociągnij brakujące (undefined)
+    const missingIds = organizerCastings
+      .map((c) => c.id)
+      .filter((id) => id && typeof castingBanners[id] === "undefined");
+
+    if (missingIds.length > 0) {
+      Promise.allSettled(missingIds.map((id) => fetchBannerFor(id))).catch(
+        () => {}
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [organizerCastings, fetchBannerFor]);
 
   const selectedRoleNames = useMemo(
     () => formData.roles.map((r) => r.role).filter(Boolean),
     [formData.roles]
   );
 
-  // role, które można jeszcze dodać (bez Modela – ten jest stały)
   const availableExtraRoles = useMemo(
     () =>
       ALL_ROLES.filter((r) => r !== "Model" && !selectedRoleNames.includes(r)),
@@ -75,72 +233,46 @@ const OrganizerDashboard = () => {
 
   const validateForm = () => {
     const e = {};
-
-    // Title: min 5, max 100
-    if (!formData.title) {
-      e.title = "Tytuł jest wymagany";
-    } else if (formData.title.length < 5 || formData.title.length > 100) {
+    if (!formData.title) e.title = "Tytuł jest wymagany";
+    else if (formData.title.length < 5 || formData.title.length > 100)
       e.title = "Tytuł musi mieć od 5 do 100 znaków";
-    }
 
-    // Description: min 20, max 2000
-    if (!formData.description) {
-      e.description = "Opis jest wymagany";
-    } else if (
+    if (!formData.description) e.description = "Opis jest wymagany";
+    else if (
       formData.description.length < 20 ||
       formData.description.length > 2000
-    ) {
+    )
       e.description = "Opis musi mieć od 20 do 2000 znaków";
-    }
 
-    // Location: min 2, max 100
-    if (!formData.location) {
-      e.location = "Lokalizacja jest wymagana";
-    } else if (formData.location.length < 2 || formData.location.length > 100) {
+    if (!formData.location) e.location = "Lokalizacja jest wymagana";
+    else if (formData.location.length < 2 || formData.location.length > 100)
       e.location = "Lokalizacja musi mieć od 2 do 100 znaków";
-    }
 
-    // Deadline / eventDate
-    if (!formData.deadline) {
-      e.deadline = "Termin jest wymagany";
-    }
+    if (!formData.deadline) e.deadline = "Termin jest wymagany";
 
-    // Requirements: max 1000
-    if (!formData.requirements) {
-      e.requirements = "Wymagania są wymagane";
-    } else if (formData.requirements.length > 1000) {
+    if (!formData.requirements) e.requirements = "Wymagania są wymagane";
+    else if (formData.requirements.length > 1000)
       e.requirements = "Wymagania nie mogą przekraczać 1000 znaków";
-    }
 
-    // Compensation: optional, max 100
     if (
       showCompensation &&
       formData.compensation &&
       formData.compensation.length > 100
-    ) {
+    )
       e.compensation = "Wynagrodzenie nie może być dłuższe niż 100 znaków";
-    }
 
-    // Banner: max 1 file – masz już to w UI, walidacja dodatkowa:
-    if (formData.bannerFile && formData.bannerFile.length > 1) {
-      e.bannerFile = "Możesz dodać tylko jeden plik";
-    }
-
-    // Roles
     formData.roles.forEach((r, i) => {
-      if (!r.role) {
-        e[`role-${i}`] = "Wybierz rolę";
-      } else if (!r.capacity || isNaN(r.capacity) || Number(r.capacity) <= 0) {
+      if (!r.role) e[`role-${i}`] = "Wybierz rolę";
+      else if (!r.capacity || isNaN(r.capacity) || Number(r.capacity) <= 0)
         e[`role-${i}`] = "Podaj poprawną liczbę miejsc";
-      }
     });
 
-    // Tags: max 5
     if (formData.tags) {
-      const tagList = formData.tags.split(",").map((t) => t.trim());
-      if (tagList.length > 5) {
-        e.tags = "Możesz dodać maksymalnie 5 tagów";
-      }
+      const tagList = formData.tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+      if (tagList.length > 5) e.tags = "Możesz dodać maksymalnie 5 tagów";
     }
 
     setErrors(e);
@@ -165,11 +297,8 @@ const OrganizerDashboard = () => {
 
   const addEmptyRoleRow = () => {
     setFormData((p) => {
-      if (p.roles.length >= ALL_ROLES.length) return p; // limit
-      return {
-        ...p,
-        roles: [...p.roles, { role: "", capacity: "" }],
-      };
+      if (p.roles.length >= ALL_ROLES.length) return p;
+      return { ...p, roles: [...p.roles, { role: "", capacity: "" }] };
     });
   };
 
@@ -180,29 +309,58 @@ const OrganizerDashboard = () => {
     }));
   };
 
+  /** Upload bannera – POST /casting/casting/{castingId}/banner z polem `File` */
+  const uploadCastingBanner = useCallback(async (castingId, file) => {
+    try {
+      const fd = new FormData();
+      fd.append("File", file); // dokładnie tak jak w Swaggerze
+
+      const res = await apiFetch(`/casting/casting/${castingId}/banner`, {
+        method: "POST",
+        body: fd,
+      });
+
+      const fileUrl = res?.url ? toAbsoluteUrl(res.url) : "";
+      if (!fileUrl) return null;
+
+      const busted = bust(fileUrl); // wymusza świeże pobranie
+      setCastingBanners((prev) => {
+        const next = { ...prev, [castingId]: busted };
+        writeBannerCache(next);
+        return next;
+      });
+
+      return busted;
+    } catch (e) {
+      console.error("Błąd uploadu bannera:", e);
+      // (opcjonalnie) oznacz brak bannera, by nie wisiało "Ładowanie…"
+      setCastingBanners((prev) => {
+        const next = { ...prev, [castingId]: null };
+        writeBannerCache(next);
+        return next;
+      });
+      return null;
+    }
+  }, []);
+
+  /** Tworzenie castingu + upload bannera */
   const handleSubmit = async (e) => {
-    console.log("currentUser:", currentUser);
     e.preventDefault();
     if (!validateForm()) return;
 
-    // ustalmy godzinę na 12:00, żeby uniknąć niespodzianek TZ
     const event = new Date(formData.deadline);
     event.setHours(12, 0, 0, 0);
 
-    const castingData = {
+    const payload = {
       title: formData.title,
       description: formData.description,
       location: formData.location,
       eventDate: event.toISOString(),
       requirements: formData.requirements,
       compensation: showCompensation ? formData.compensation : "",
-      bannerUrl: formData.bannerFile
-        ? URL.createObjectURL(formData.bannerFile)
-        : "",
       roles: formData.roles
-        .filter((r) => r.role) // ignoruj puste wiersze
+        .filter((r) => r.role)
         .map((r) => ({
-          // KLUCZOWE: wysyłamy wartości akceptowane przez API
           role: roleMap[r.role],
           capacity: parseInt(r.capacity, 10),
         })),
@@ -210,17 +368,44 @@ const OrganizerDashboard = () => {
         ? formData.tags
             .split(",")
             .map((t) => t.trim())
+            .filter(Boolean)
             .slice(0, 5)
         : [],
     };
-    console.log("castingData wysyłane do backendu:", castingData);
 
-    const result = await createCasting(castingData);
+    try {
+      const result = await createCasting(payload);
+      if (!result?.success) {
+        console.error("createCasting error:", result);
+        alert("Błąd podczas tworzenia castingu");
+        return;
+      }
 
-    if (result.success) {
+      const createdCasting = result?.casting ?? result?.data ?? result;
+      const newId = createdCasting?.id;
+      if (!newId) {
+        console.error("Brak ID w odpowiedzi API:", result);
+        alert("Casting utworzony, ale nie udało się odczytać jego ID.");
+        return;
+      }
+
+      if (formData.bannerFile) {
+        try {
+          setIsUploadingBanner(true);
+          await uploadCastingBanner(newId, formData.bannerFile);
+        } catch (err) {
+          console.error("Błąd uploadu bannera:", err);
+          alert("Casting utworzony, ale nie udało się wgrać bannera.");
+        } finally {
+          setIsUploadingBanner(false);
+        }
+      }
+
+      // Reset formularza
       setFormData({
         title: "",
         description: "",
+        requirements: "",
         location: "",
         compensation: "",
         tags: "",
@@ -231,9 +416,9 @@ const OrganizerDashboard = () => {
       setShowCompensation(false);
       setShowCreateForm(false);
       alert("Casting został utworzony pomyślnie!");
-    } else {
+    } catch (err) {
+      console.error("Wyjątek przy tworzeniu castingu:", err);
       alert("Błąd podczas tworzenia castingu");
-      console.error(result.error);
     }
   };
 
@@ -263,19 +448,14 @@ const OrganizerDashboard = () => {
     }
   };
 
-  const formatDate = (d) => new Date(d).toLocaleDateString("pl-PL");
-
   const handleUpdateStatus = async (applicationId, newStatus) => {
     if (!selectedCasting) return;
     try {
       await apiFetch(
         `/casting/casting/${applicationId}/status?castingId=${selectedCasting.id}&status=${newStatus}`,
-        { method: "GET" } // według Swaggera zmiana statusu jest na GET
+        { method: "GET" }
       );
-
-      // Odśwież zgłoszenia po akcji – np. wywołaj contextową funkcję
       await getCastingApplications(selectedCasting.id);
-
       alert(
         newStatus === "accepted"
           ? "Zgłoszenie zaakceptowane"
@@ -305,21 +485,29 @@ const OrganizerDashboard = () => {
           </Button>
         </div>
 
-        {/* Create Casting Form */}
+        {/* FORMULARZ */}
         {showCreateForm && (
-          <Card className="mb-8">
+          <Card className="mb-8 relative">
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="absolute top-3 right-3 z-10 bg-[#EA1A62] text-white rounded-full p-1.5 hover:bg-[#c7154f] focus:outline-none focus:ring-2 focus:ring-[#EA1A62]"
+              aria-label="Zamknij formularz"
+              title="Zamknij"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
             <Card.Header>
               <h2 className="text-xl font-semibold text-[#2B2628]">
                 Utwórz nowy casting
               </h2>
             </Card.Header>
             <Card.Content>
-              {/* zwężenie formularza */}
               <form
                 onSubmit={handleSubmit}
                 className="space-y-6 max-w-3xl mx-auto"
               >
-                {/* Tytuł (full width) */}
                 <Input
                   label="Tytuł"
                   name="title"
@@ -330,7 +518,6 @@ const OrganizerDashboard = () => {
                   placeholder="Sesja zdjęciowa dla marki odzieżowej"
                 />
 
-                {/* Opis (full width) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Opis <span className="text-red-500">*</span>
@@ -373,7 +560,6 @@ const OrganizerDashboard = () => {
                   )}
                 </div>
 
-                {/* Wiersz: Lokalizacja (węższa) + plusik Wynagrodzenie / pole Wynagrodzenie */}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                   <div className="md:col-span-7">
                     <Input
@@ -485,8 +671,7 @@ const OrganizerDashboard = () => {
 
                   {/* Dodatkowe role */}
                   {formData.roles.slice(1).map((r, idx) => {
-                    const i = idx + 1; // realny index w roles
-                    // opcje dla tego selecta: rola aktualnie wybrana + wszystkie jeszcze nieużyte
+                    const i = idx + 1;
                     const options = ALL_ROLES.filter(
                       (role) =>
                         role !== "Model" &&
@@ -554,7 +739,6 @@ const OrganizerDashboard = () => {
                     );
                   })}
 
-                  {/* Plusik dodający kolejną rolę */}
                   {formData.roles.length < ALL_ROLES.length &&
                     availableExtraRoles.length > 0 && (
                       <button
@@ -568,7 +752,6 @@ const OrganizerDashboard = () => {
                     )}
                 </div>
 
-                {/* Termin */}
                 <Input
                   label="Termin zgłoszeń"
                   name="deadline"
@@ -579,14 +762,19 @@ const OrganizerDashboard = () => {
                   required
                 />
 
-                {/* Banner – styl jak upload */}
+                {/* Banner – upload + podgląd */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Banner castingu
+                    Banner castingu{" "}
+                    {isUploadingBanner && (
+                      <span className="text-xs text-gray-500">
+                        (wysyłanie…)
+                      </span>
+                    )}
                   </label>
 
                   {!formData.bannerFile ? (
-                    <label className="flex items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#EA1A62]">
+                    <label className="flex items-center justify-center w-full aspect-[16/9] border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-[#EA1A62]">
                       <span className="text-gray-500">
                         Kliknij, aby dodać banner
                       </span>
@@ -595,22 +783,20 @@ const OrganizerDashboard = () => {
                         accept="image/*"
                         className="hidden"
                         onChange={(e) => {
-                          const file = e.target.files[0];
-                          if (file) {
+                          const file = e.target.files?.[0];
+                          if (file)
                             setFormData((prev) => ({
                               ...prev,
                               bannerFile: file,
                             }));
-                          }
                         }}
                       />
                     </label>
                   ) : (
-                    <div className="relative w-full h-40 border rounded-lg overflow-hidden bg-gray-50">
-                      <img
+                    <div className="relative w-full">
+                      <BannerImage
                         src={URL.createObjectURL(formData.bannerFile)}
                         alt="Podgląd bannera"
-                        className="object-contain w-full h-full"
                       />
                       <button
                         type="button"
@@ -625,7 +811,6 @@ const OrganizerDashboard = () => {
                   )}
                 </div>
 
-                {/* Tagi */}
                 <Input
                   label="Tagi (oddzielone przecinkami, max 5)"
                   name="tags"
@@ -648,7 +833,7 @@ const OrganizerDashboard = () => {
           </Card>
         )}
 
-        {/* Lista castingów i zgłoszeń – bez zmian funkcjonalnych */}
+        {/* LISTA CASTINGÓW + ZGŁOSZENIA */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div>
             <Card>
@@ -658,7 +843,11 @@ const OrganizerDashboard = () => {
                 </h2>
               </Card.Header>
               <Card.Content>
-                {organizerCastings.length === 0 ? (
+                {isLoading ? (
+                  <p className="text-gray-500 text-center py-4">
+                    Ładowanie castingów...
+                  </p>
+                ) : organizerCastings.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">
                     Nie masz jeszcze żadnych castingów
                   </p>
@@ -667,13 +856,38 @@ const OrganizerDashboard = () => {
                     {organizerCastings.map((c) => (
                       <div
                         key={c.id}
-                        className={`border border-gray-200 rounded-lg p-4 cursor-pointer transition-colors ${
-                          selectedCasting?.id === c.id
-                            ? "border-[#EA1A62] bg-pink-50"
-                            : "hover:bg-gray-50"
-                        }`}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={selectedCasting?.id === c.id}
+                        aria-selected={selectedCasting?.id === c.id}
                         onClick={() => setSelectedCasting(c)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ")
+                            setSelectedCasting(c);
+                        }}
+                        className={[
+                          "border rounded-lg p-4 cursor-pointer transition-colors outline-none",
+                          "hover:bg-gray-50",
+                          "focus:ring-2 focus:ring-[#EA1A62] focus:ring-offset-0",
+                          selectedCasting?.id === c.id
+                            ? "border-[#EA1A62] bg-pink-50 ring-2 ring-[#EA1A62]"
+                            : "border-gray-200",
+                        ].join(" ")}
                       >
+                        {/* Banner (uniwersalny, bez zniekształceń i bez pustych pasów) */}
+                        <div className="w-full mb-3">
+                          {typeof castingBanners[c.id] === "string" &&
+                          castingBanners[c.id] ? (
+                            <BannerImage
+                              src={castingBanners[c.id]}
+                              alt={`Banner castingu ${c.title}`}
+                              className="rounded-lg"
+                            />
+                          ) : (
+                            <BannerPlaceholder />
+                          )}
+                        </div>
+
                         <h3 className="font-medium text-gray-900 mb-2">
                           {c.title}
                         </h3>
@@ -689,14 +903,14 @@ const OrganizerDashboard = () => {
                           </div>
                         </div>
 
-                        {/* Role with counts */}
                         <div className="flex flex-wrap gap-3 mb-2">
                           {c.roles?.map((role, idx) => (
                             <span
                               key={idx}
                               className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                             >
-                              {role.role} {role.acceptedCount}/{role.capacity}
+                              {roleDisplayMap[role.role] || role.role}{" "}
+                              {role.acceptedCount || 0}/{role.capacity}
                             </span>
                           ))}
                         </div>
@@ -704,7 +918,11 @@ const OrganizerDashboard = () => {
                         <div className="flex items-center justify-between">
                           <p className="text-xs text-gray-500">
                             Utworzono:{" "}
-                            {c.createdAt ? formatDate(c.createdAt) : "-"}
+                            {c.createdAt
+                              ? new Date(c.createdAt).toLocaleDateString(
+                                  "pl-PL"
+                                )
+                              : "-"}
                           </p>
                           <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
                             Aktywny
@@ -734,9 +952,8 @@ const OrganizerDashboard = () => {
                   </p>
                 ) : (
                   (() => {
-                    const castingApplications = getCastingApplications(
-                      selectedCasting.id
-                    );
+                    const castingApplications =
+                      getCastingApplications(selectedCasting.id) || [];
                     return castingApplications.length === 0 ? (
                       <p className="text-gray-500 text-center py-4">
                         Brak zgłoszeń do tego castingu
