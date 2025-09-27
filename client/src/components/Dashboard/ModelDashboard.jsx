@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch } from "../../utils/api";
 import {
@@ -13,9 +14,9 @@ import {
 import Card from "../UI/Card";
 import Button from "../UI/Button";
 
-/** =========================
- *  Mapowania ról (bez zmian)
- *  ========================= */
+/* =========================
+ * Mapowania ról (bez zmian)
+ * ========================= */
 const roleEnumMap = {
   0: "Model",
   1: "Photographer",
@@ -44,11 +45,10 @@ const getRoleDisplayName = (role) => {
   return roleDisplayMap[role] || role;
 };
 
-/** =========================
- *  Narzędzia do bannerów
- *  (spójne z OrganizerDashboard)
- *  ========================= */
-const ALL_BANNERS_STORAGE_KEY = "castingBannerUrls"; // współdzielony cache
+/* =========================
+ * Narzędzia do bannerów
+ * ========================= */
+const BANNERS_STORAGE_KEY = "castingBannerUrls"; // współdzielony cache z OrganizerDashboard
 
 const API_BASE =
   (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
@@ -62,7 +62,7 @@ const toAbsoluteUrl = (u) => {
 
 const readBannerCache = () => {
   try {
-    const raw = localStorage.getItem(ALL_BANNERS_STORAGE_KEY);
+    const raw = localStorage.getItem(BANNERS_STORAGE_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch {
     return {};
@@ -71,7 +71,7 @@ const readBannerCache = () => {
 
 const writeBannerCache = (obj) => {
   try {
-    localStorage.setItem(ALL_BANNERS_STORAGE_KEY, JSON.stringify(obj));
+    localStorage.setItem(BANNERS_STORAGE_KEY, JSON.stringify(obj));
   } catch {}
 };
 
@@ -110,7 +110,7 @@ const BannerImage = ({ src, alt = "", className = "" }) => {
   );
 };
 
-/** Placeholder na kartach, gdy brak obrazka lub błąd */
+/** Placeholder gdy brak obrazka lub błąd */
 const BannerPlaceholder = ({ text = "Casting bez bannera" }) => (
   <div className="relative w-full aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center justify-center">
     <ImageOff className="w-8 h-8 text-gray-400 mb-2" />
@@ -132,21 +132,22 @@ const ModelDashboard = () => {
   /** Cache URL-i bannerów: { [castingId]: string|null|undefined } */
   const [castingBanners, setCastingBanners] = useState({});
 
-  /** ================
-   *  Fetch danych
-   *  ================ */
+  /** Refs + focus-trap dla modala */
+  const modalRef = useRef(null);
+  const previouslyFocusedRef = useRef(null);
+
+  /* =========================
+   * Pobieranie castingów (z sortowaniem od najnowszych)
+   * ========================= */
   useEffect(() => {
     const fetchCastings = async () => {
       try {
         const data = await apiFetch("/casting/casting");
-
-        // ✅ sortowanie od najnowszych (createdAt DESC; fallback: eventDate DESC)
         const sorted = (Array.isArray(data) ? [...data] : []).sort((a, b) => {
           const ad = new Date(a?.createdAt || a?.eventDate || 0).getTime();
           const bd = new Date(b?.createdAt || b?.eventDate || 0).getTime();
           return bd - ad; // najnowsze najpierw
         });
-
         setCastings(sorted);
       } catch (err) {
         setError("Błąd pobierania castingów");
@@ -158,6 +159,9 @@ const ModelDashboard = () => {
     fetchCastings();
   }, []);
 
+  /* =========================
+   * Pobieranie zgłoszeń użytkownika
+   * ========================= */
   useEffect(() => {
     if (!currentUser) return;
     const fetchApplications = async () => {
@@ -173,20 +177,20 @@ const ModelDashboard = () => {
     fetchApplications();
   }, [currentUser]);
 
-  /** ================
-   *  Cache bannerów
-   *  ================ */
-  // 1) wczytaj cache na starcie
+  /* =========================
+   * Cache bannerów (start + zapis)
+   * ========================= */
   useEffect(() => {
     setCastingBanners((prev) => ({ ...readBannerCache(), ...prev }));
   }, []);
 
-  // 2) zapisuj cache przy każdej zmianie
   useEffect(() => {
     writeBannerCache(castingBanners);
   }, [castingBanners]);
 
-  // 3) helper: dociągnij banner pojedynczego castingu i zapisz w cache
+  /* =========================
+   * Pobieranie banneru pojedynczego castingu
+   * ========================= */
   const fetchBannerFor = useCallback(async (castingId) => {
     if (!castingId) return;
     try {
@@ -211,11 +215,13 @@ const ModelDashboard = () => {
     }
   }, []);
 
-  // 4) po pobraniu listy castingów dociągnij brakujące bannery
+  /* =========================
+   * Po pobraniu listy — dociągnij brakujące bannery
+   * ========================= */
   useEffect(() => {
     if (!castings?.length) return;
 
-    // jeśli backend kiedyś zwróci inline url — preferuj go
+    // jeżeli backend zwraca inline url — skorzystaj
     setCastingBanners((prev) => {
       const next = { ...prev };
       castings.forEach((c) => {
@@ -240,9 +246,78 @@ const ModelDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [castings, fetchBannerFor]);
 
-  /** ================
-   *  UI helpers
-   *  ================ */
+  /* =========================
+   * Focus trap + scroll lock (prosto i niezawodnie)
+   * ========================= */
+  useEffect(() => {
+    if (!selectedCasting) return;
+
+    // zapamiętaj poprzedni fokus i zablokuj scroll
+    previouslyFocusedRef.current = document.activeElement;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    // po wyrenderowaniu ustaw focus na pierwszym fokusowalnym
+    const id = requestAnimationFrame(() => {
+      if (!modalRef.current) return;
+      const focusables = getFocusable(modalRef.current);
+      if (focusables.length) focusables[0].focus();
+      else modalRef.current.focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(id);
+      document.body.style.overflow = originalOverflow || "";
+      if (previouslyFocusedRef.current && previouslyFocusedRef.current.focus) {
+        previouslyFocusedRef.current.focus();
+      }
+    };
+  }, [selectedCasting]);
+
+  /* =========================
+   * Helpery a11y/keyboard
+   * ========================= */
+  function getFocusable(root) {
+    if (!root) return [];
+    const selector = [
+      "a[href]",
+      "button:not([disabled])",
+      "input:not([disabled])",
+      "select:not([disabled])",
+      "textarea:not([disabled])",
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(",");
+    return Array.from(root.querySelectorAll(selector)).filter(
+      (el) => el.offsetParent !== null || el.getClientRects().length
+    );
+  }
+
+  const handleModalKeyDown = (e) => {
+    if (e.key === "Tab") {
+      const focusables = getFocusable(modalRef.current);
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    } else if (e.key === "Escape") {
+      setSelectedCasting(null);
+      setApplicationMessage("");
+    }
+  };
+
+  /* =========================
+   * Akcje
+   * ========================= */
   const formatDate = (date) => new Date(date).toLocaleDateString("pl-PL");
 
   const getStatusColor = (status) => {
@@ -310,9 +385,9 @@ const ModelDashboard = () => {
       (app) => app.id === castingId || app.castingId === castingId
     );
 
-  /** ================
-   *  Render
-   *  ================ */
+  /* =========================
+   * Render
+   * ========================= */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -406,7 +481,7 @@ const ModelDashboard = () => {
                       key={casting.id}
                       className="border border-gray-200 rounded-lg p-6"
                     >
-                      {/* --- BANNER (jak w OrganizerDashboard) --- */}
+                      {/* Banner (jak w OrganizerDashboard) */}
                       <div className="w-full mb-3">
                         {typeof castingBanners[casting.id] === "string" &&
                         castingBanners[casting.id] ? (
@@ -498,46 +573,96 @@ const ModelDashboard = () => {
         </div>
       </div>
 
-      {/* Modal zgłoszenia */}
-      {selectedCasting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-[#2B2628] mb-4">
-              Zgłoś się do: {selectedCasting.title}
-            </h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Wiadomość (opcjonalna)
-              </label>
-              <textarea
-                value={applicationMessage}
-                onChange={(e) => setApplicationMessage(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62]"
-                rows="4"
-                placeholder="Opisz dlaczego jesteś idealną osobą do tego castingu..."
-              />
-            </div>
-            <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setSelectedCasting(null);
-                  setApplicationMessage("");
+      {/* Modal zgłoszenia – przez portal + pełny overlay, rozmyte tło, focus trap */}
+      {selectedCasting &&
+        createPortal(
+          (() => {
+            const bannerUrl = castingBanners?.[selectedCasting.id] || "";
+            return (
+              <div
+                className="fixed inset-0 z-50"
+                // overlay łapie kliknięcia, żeby nic nie „przebijało”
+                onMouseDown={(e) => {
+                  // klik w overlay nie zamyka sam z siebie; tylko blokuje tło
+                  // jeśli chcesz: setSelectedCasting(null);
+                  e.stopPropagation();
                 }}
               >
-                Anuluj
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => handleApply(selectedCasting.id)}
-              >
-                Wyślij zgłoszenie
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+                {/* Warstwa tła (rozmyty banner + przyciemnienie) */}
+                <div className="absolute inset-0">
+                  {bannerUrl && (
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 bg-center bg-cover"
+                      style={{
+                        backgroundImage: `url(${bannerUrl})`,
+                        filter: "blur(22px)",
+                        transform: "scale(1.12)",
+                        opacity: 0.5,
+                      }}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                </div>
+
+                {/* Kontener centrowany */}
+                <div className="relative min-h-full flex items-center justify-center p-4">
+                  <div
+                    ref={modalRef}
+                    className="bg-white rounded-2xl w-full max-w-md shadow-xl ring-1 ring-black/5 outline-none"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="apply-modal-title"
+                    onKeyDown={handleModalKeyDown}
+                    tabIndex={-1}
+                    // klik w panel nie bąbelkuje do overlay
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <h3
+                      id="apply-modal-title"
+                      className="text-lg font-semibold text-[#2B2628] mb-4 px-6 pt-6"
+                    >
+                      Zgłoś się do: {selectedCasting.title}
+                    </h3>
+
+                    <div className="px-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Wiadomość (opcjonalna)
+                      </label>
+                      <textarea
+                        value={applicationMessage}
+                        onChange={(e) => setApplicationMessage(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62]"
+                        rows="4"
+                        placeholder="Opisz dlaczego jesteś idealną osobą do tego castingu..."
+                      />
+                    </div>
+
+                    <div className="flex space-x-3 px-6 pb-6 pt-4">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setSelectedCasting(null);
+                          setApplicationMessage("");
+                        }}
+                      >
+                        Anuluj
+                      </Button>
+                      <Button
+                        className="flex-1"
+                        onClick={() => handleApply(selectedCasting.id)}
+                      >
+                        Wyślij zgłoszenie
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })(),
+          document.body
+        )}
     </div>
   );
 };
