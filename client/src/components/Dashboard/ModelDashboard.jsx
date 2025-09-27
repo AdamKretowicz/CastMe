@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { apiFetch } from "../../utils/api";
 import {
@@ -8,13 +8,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  ImageOff,
 } from "lucide-react";
 import Card from "../UI/Card";
 import Button from "../UI/Button";
 
-/**
- * Mapowanie numerycznych enumów ról z API na nazwy w języku angielskim
- */
+/** =========================
+ *  Mapowania ról (bez zmian)
+ *  ========================= */
 const roleEnumMap = {
   0: "Model",
   1: "Photographer",
@@ -22,53 +23,131 @@ const roleEnumMap = {
   3: "Volunteer",
 };
 
-/**
- * Mapowanie z wartości API (EN/enum) → etykiety UI (PL)
- */
 const roleDisplayMap = {
-  // Stringowe nazwy
   Model: "Model",
   Photographer: "Fotograf",
   Designer: "Projektant",
   Volunteer: "Wolontariusz",
-
-  // Numeryczne enumy (fallback)
   0: "Model",
   1: "Fotograf",
   2: "Projektant",
   3: "Wolontariusz",
 };
 
-/**
- * Funkcja pomocnicza do normalizacji nazwy roli
- */
 const getRoleDisplayName = (role) => {
-  // Jeśli role jest numerem, najpierw spróbuj zmapować na angielską nazwę
   if (typeof role === "number") {
     const englishName = roleEnumMap[role];
     return (
       roleDisplayMap[englishName] || roleDisplayMap[role] || `Rola ${role}`
     );
   }
-
-  // Jeśli role jest stringiem, bezpośrednio mapuj na polską nazwę
   return roleDisplayMap[role] || role;
 };
 
+/** =========================
+ *  Narzędzia do bannerów
+ *  (spójne z OrganizerDashboard)
+ *  ========================= */
+const ALL_BANNERS_STORAGE_KEY = "castingBannerUrls"; // współdzielony cache
+
+const API_BASE =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) ||
+  (typeof window !== "undefined" ? window.location.origin : "");
+
+const toAbsoluteUrl = (u) => {
+  if (!u) return "";
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  return `${API_BASE}${u.startsWith("/") ? "" : "/"}${u}`;
+};
+
+const readBannerCache = () => {
+  try {
+    const raw = localStorage.getItem(ALL_BANNERS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeBannerCache = (obj) => {
+  try {
+    localStorage.setItem(ALL_BANNERS_STORAGE_KEY, JSON.stringify(obj));
+  } catch {}
+};
+
+/** Komponent bannera: 16:9, obraz "contain" + rozmyte tło wypełniające */
+const BannerImage = ({ src, alt = "", className = "" }) => {
+  if (!src) {
+    return (
+      <div
+        className={`relative w-full aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center ${className}`}
+      >
+        <span className="text-gray-400 text-sm">Brak bannera</span>
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`relative w-full aspect-[16/9] rounded-lg overflow-hidden ${className}`}
+    >
+      <div
+        aria-hidden
+        className="absolute inset-0 bg-center bg-cover"
+        style={{
+          backgroundImage: `url(${src})`,
+          filter: "blur(16px)",
+          transform: "scale(1.1)",
+          opacity: 0.45,
+        }}
+      />
+      <img
+        src={src}
+        alt={alt}
+        className="absolute inset-0 w-full h-full object-contain"
+        loading="lazy"
+      />
+    </div>
+  );
+};
+
+/** Placeholder na kartach, gdy brak obrazka lub błąd */
+const BannerPlaceholder = ({ text = "Casting bez bannera" }) => (
+  <div className="relative w-full aspect-[16/9] bg-gray-100 rounded-lg overflow-hidden flex flex-col items-center justify-center">
+    <ImageOff className="w-8 h-8 text-gray-400 mb-2" />
+    <span className="text-gray-500 text-sm">{text}</span>
+  </div>
+);
+
 const ModelDashboard = () => {
   const { currentUser } = useAuth();
+
   const [castings, setCastings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
   const [userApplications, setUserApplications] = useState([]);
 
+  /** Cache URL-i bannerów: { [castingId]: string|null|undefined } */
+  const [castingBanners, setCastingBanners] = useState({});
+
+  /** ================
+   *  Fetch danych
+   *  ================ */
   useEffect(() => {
     const fetchCastings = async () => {
       try {
         const data = await apiFetch("/casting/casting");
-        setCastings(data);
+
+        // ✅ sortowanie od najnowszych (createdAt DESC; fallback: eventDate DESC)
+        const sorted = (Array.isArray(data) ? [...data] : []).sort((a, b) => {
+          const ad = new Date(a?.createdAt || a?.eventDate || 0).getTime();
+          const bd = new Date(b?.createdAt || b?.eventDate || 0).getTime();
+          return bd - ad; // najnowsze najpierw
+        });
+
+        setCastings(sorted);
       } catch (err) {
         setError("Błąd pobierania castingów");
         console.error(err);
@@ -86,9 +165,7 @@ const ModelDashboard = () => {
         const data = await apiFetch(
           `/casting/casting/participants/${currentUser.id}`
         );
-        setUserApplications(data);
-        console.log("currentUser.id:", currentUser.id);
-        console.log("userApplications (response):", data);
+        setUserApplications(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Błąd pobierania zgłoszeń użytkownika:", err);
       }
@@ -96,9 +173,77 @@ const ModelDashboard = () => {
     fetchApplications();
   }, [currentUser]);
 
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("pl-PL");
-  };
+  /** ================
+   *  Cache bannerów
+   *  ================ */
+  // 1) wczytaj cache na starcie
+  useEffect(() => {
+    setCastingBanners((prev) => ({ ...readBannerCache(), ...prev }));
+  }, []);
+
+  // 2) zapisuj cache przy każdej zmianie
+  useEffect(() => {
+    writeBannerCache(castingBanners);
+  }, [castingBanners]);
+
+  // 3) helper: dociągnij banner pojedynczego castingu i zapisz w cache
+  const fetchBannerFor = useCallback(async (castingId) => {
+    if (!castingId) return;
+    try {
+      const res = await apiFetch(`/casting/casting/${castingId}/banner`, {
+        method: "GET",
+      });
+      const absUrl = toAbsoluteUrl(res?.url);
+      setCastingBanners((prev) => {
+        const next = { ...prev, [castingId]: absUrl || null };
+        writeBannerCache(next);
+        return next;
+      });
+    } catch (err) {
+      setCastingBanners((prev) => {
+        const next = { ...prev, [castingId]: null };
+        writeBannerCache(next);
+        return next;
+      });
+      if (err?.status !== 404) {
+        console.error("Banner fetch error for", castingId, err);
+      }
+    }
+  }, []);
+
+  // 4) po pobraniu listy castingów dociągnij brakujące bannery
+  useEffect(() => {
+    if (!castings?.length) return;
+
+    // jeśli backend kiedyś zwróci inline url — preferuj go
+    setCastingBanners((prev) => {
+      const next = { ...prev };
+      castings.forEach((c) => {
+        const inlineUrl =
+          c.bannerUrl || c.banner?.url || c.bannerPath || c.banner;
+        if (inlineUrl && next[c.id] == null) {
+          next[c.id] = toAbsoluteUrl(inlineUrl);
+        }
+      });
+      return next;
+    });
+
+    const missingIds = castings
+      .map((c) => c.id)
+      .filter((id) => id && typeof castingBanners[id] === "undefined");
+
+    if (missingIds.length > 0) {
+      Promise.allSettled(missingIds.map((id) => fetchBannerFor(id))).catch(
+        () => {}
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [castings, fetchBannerFor]);
+
+  /** ================
+   *  UI helpers
+   *  ================ */
+  const formatDate = (date) => new Date(date).toLocaleDateString("pl-PL");
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -150,7 +295,7 @@ const ModelDashboard = () => {
       const data = await apiFetch(
         `/casting/casting/participants/${currentUser.id}`
       );
-      setUserApplications(data);
+      setUserApplications(Array.isArray(data) ? data : []);
       setSelectedCasting(null);
       setApplicationMessage("");
       alert("Zgłoszenie zostało wysłane!");
@@ -160,10 +305,14 @@ const ModelDashboard = () => {
     }
   };
 
-  const hasApplied = (castingId) => {
-    return userApplications.some((app) => app.id === castingId);
-  };
+  const hasApplied = (castingId) =>
+    userApplications.some(
+      (app) => app.id === castingId || app.castingId === castingId
+    );
 
+  /** ================
+   *  Render
+   *  ================ */
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -192,7 +341,7 @@ const ModelDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* My Applications */}
+          {/* Moje zgłoszenia */}
           <div className="lg:col-span-1">
             <Card>
               <Card.Header>
@@ -212,7 +361,6 @@ const ModelDashboard = () => {
                         (c) => c.id === application.castingId
                       );
                       if (!casting) return null;
-
                       return (
                         <div
                           key={application.id}
@@ -243,7 +391,7 @@ const ModelDashboard = () => {
             </Card>
           </div>
 
-          {/* Available Castings */}
+          {/* Dostępne castingi */}
           <div className="lg:col-span-2">
             <Card>
               <Card.Header>
@@ -258,6 +406,20 @@ const ModelDashboard = () => {
                       key={casting.id}
                       className="border border-gray-200 rounded-lg p-6"
                     >
+                      {/* --- BANNER (jak w OrganizerDashboard) --- */}
+                      <div className="w-full mb-3">
+                        {typeof castingBanners[casting.id] === "string" &&
+                        castingBanners[casting.id] ? (
+                          <BannerImage
+                            src={castingBanners[casting.id]}
+                            alt={`Banner castingu ${casting.title}`}
+                            className="rounded-lg"
+                          />
+                        ) : (
+                          <BannerPlaceholder />
+                        )}
+                      </div>
+
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-[#2B2628] mb-2">
@@ -274,7 +436,6 @@ const ModelDashboard = () => {
                             </div>
                           </div>
 
-                          {/* Role with counts - NOWA SEKCJA */}
                           {casting.roles && casting.roles.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-3">
                               {casting.roles.map((role, idx) => (
@@ -337,7 +498,7 @@ const ModelDashboard = () => {
         </div>
       </div>
 
-      {/* Application Modal */}
+      {/* Modal zgłoszenia */}
       {selectedCasting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
