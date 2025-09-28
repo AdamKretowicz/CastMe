@@ -1,6 +1,6 @@
 import { useAuth } from "../context/AuthContext";
 import ModelDashboard from "../components/Dashboard/Model/ModelDashboard.jsx";
-import OrganizerDashboard from "../components/Dashboard/OrganizerDashboard";
+import OrganizerDashboard from "../components/Dashboard/Organizer/OrganizerDashboard";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
