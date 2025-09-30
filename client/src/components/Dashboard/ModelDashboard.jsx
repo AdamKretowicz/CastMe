@@ -249,14 +249,14 @@ const ModelDashboard = () => {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {casting.roles.map((role) => (
-                            <span
-                              key={role}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
-                            >
-                              {role}
-                            </span>
-                          ))}
+                        {casting.roles.map((role, index) => (
+                          <span
+                            key={typeof role === "string" ? role : role.id || index}
+                            className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                          >
+                            {typeof role === "string" ? role : role.name}
+                          </span>
+                        ))}
                         </div>
                       </div>
 
@@ -266,14 +266,14 @@ const ModelDashboard = () => {
 
                       {casting.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {casting.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
-                            >
-                              {tag}
-                            </span>
-                          ))}
+                          {casting.tags.map((tag, index) => (
+                          <span
+                            key={typeof tag === "string" ? tag : tag.id || index}
+                            className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
+                          >
+                            {typeof tag === "string" ? tag : tag.name}
+                          </span>
+                        ))}
                         </div>
                       )}
 

@@ -1,33 +1,45 @@
 // src/pages/PendingAccountsPage.jsx
+
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import {
-  fetchPendingUsers,
-  updateUserStatus,
-  getPhotoUrl,
-  fetchPendingUserPhotos,
-  updateUserPhotoStatus
-} from "../utils/api";
+import { fetchPendingUsers, updateUserStatus, getPhotoUrl } from "../utils/api";
 import Card from "../components/UI/Card";
 import Button from "../components/UI/Button";
-import { Clock, User, Mail, MapPin, Phone, Calendar, Ruler, Weight, Palette, Tag, Eye, Users, RefreshCw } from "lucide-react";
+import {
+  Clock,
+  User,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  Ruler,
+  Weight,
+  Palette,
+  Tag,
+  Camera,
+  Check,
+  X,
+  Users,
+  RefreshCw,
+  Eye
+} from "lucide-react";
+
 
 export default function PendingAccountsPage() {
   const navigate = useNavigate();
   const { accessToken, currentUser, loading: authLoading } = useAuth();
-
   const [pendingUsers, setPendingUsers] = useState([]);
-  const [pendingPhotos, setPendingPhotos] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [error, setError] = useState(null);
   const [processingUsers, setProcessingUsers] = useState(new Set());
-  const [currentTab, setCurrentTab] = useState("konta"); // "konta" | "zdjecia"
 
+
+  // Wait for auth context before proceeding
   useEffect(() => {
-    if (authLoading) return;
-    if (!currentUser || !accessToken) {
+    if (authLoading) return; // wait until auth context finishes loading
+    if (!currentUser) return;
+    if (!accessToken) {
       navigate("/login");
       return;
     }
@@ -43,45 +55,17 @@ export default function PendingAccountsPage() {
     setLoading(true);
     setError(null);
     try {
+      console.log("Fetching pending users with token:", accessToken);
       const users = await fetchPendingUsers(accessToken);
+      console.log("Pending users:", users);
       setPendingUsers(users || []);
     } catch (err) {
+      console.error("Error fetching pending users:", err);
       setError(err.message || "Błąd pobierania oczekujących kont");
     } finally {
       setLoading(false);
     }
   };
-
-  const loadPendingPhotos = async () => {
-    if (!accessToken) return;
-    setLoadingPhotos(true);
-    try {
-      const usersWithPendingPhotos = await fetchPendingUsers(accessToken);
-      const photoData = await Promise.all(
-        usersWithPendingPhotos.map(async (user) => {
-          const photos = await fetchPendingUserPhotos(user.id, accessToken);
-          return {
-            userId: user.id,
-            userName: user.userName,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            photos,
-          };
-        })
-      );
-      setPendingPhotos(photoData);
-    } catch (err) {
-      console.error("Error loading pending photos:", err);
-    } finally {
-      setLoadingPhotos(false);
-    }
-  };
-
-  useEffect(() => {
-    if (currentTab === "zdjecia") {
-      loadPendingPhotos();
-    }
-  }, [currentTab]);
 
   const handleStatusUpdate = async (userId, status, event) => {
     event.stopPropagation();
@@ -89,13 +73,20 @@ export default function PendingAccountsPage() {
     if (!window.confirm(`Czy na pewno chcesz ${statusText} tego użytkownika?`)) return;
 
     setProcessingUsers((prev) => new Set(prev).add(userId));
+
     try {
       await updateUserStatus(userId, status, accessToken);
-      setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
-      alert(status === "Active" ? "Użytkownik zaakceptowany" : "Użytkownik odrzucony");
+      setPendingUsers((prev) => prev.filter((user) => user.id !== userId));
+      const message =
+        status === "Active"
+          ? "Użytkownik został zaakceptowany"
+          : "Użytkownik został odrzucony";
+      alert(message);
     } catch (err) {
-      console.error(err);
-      setError(err.message || "Błąd aktualizacji statusu użytkownika");
+      console.error("Error updating user status:", err);
+      setError(
+        err.message || `Błąd ${status === "Active" ? "akceptowania" : "odrzucania"} użytkownika`
+      );
     } finally {
       setProcessingUsers((prev) => {
         const newSet = new Set(prev);
@@ -105,130 +96,244 @@ export default function PendingAccountsPage() {
     }
   };
 
-  const handleUserClick = (userId) => navigate(`/profile/${userId}`);
+  const handleUserClick = (userId) => {
+    navigate(`/profile/${userId}`);
+  };
 
-  const handlePhotoStatus = async (photoId, status, userId) => {
-    try {
-      await updateUserPhotoStatus(photoId, status, accessToken);
-      setPendingPhotos((prev) =>
-        prev.map((u) =>
-          u.userId === userId
-            ? { ...u, photos: u.photos.filter((p) => p.id !== photoId) }
-            : u
-        )
-      );
-    } catch (err) {
-      console.error(err);
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return null;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
+    return age;
   };
 
-  const handlePhotoBatchStatus = async (userId, status) => {
-    const userPhotos = pendingPhotos.find((u) => u.userId === userId)?.photos || [];
-    await Promise.all(userPhotos.map((p) => updateUserPhotoStatus(p.id, status, accessToken)));
-    setPendingPhotos((prev) =>
-      prev.map((u) => (u.userId === userId ? { ...u, photos: [] } : u))
+  const formatDate = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleDateString("pl-PL");
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white text-[#2b2628] min-h-screen p-4 md:p-10">
+        <div className="max-w-4xl mx-auto text-center py-10">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#EA1A62] mx-auto"></div>
+          <p className="mt-2">Ładowanie oczekujących kont...</p>
+        </div>
+      </div>
     );
-  };
+  }
 
-  if (loading) return <div>Ładowanie...</div>;
+  if (error) {
+    return (
+      <div className="bg-white text-[#2b2628] min-h-screen p-4 md:p-10">
+        <div className="max-w-4xl mx-auto text-center text-red-500 py-10">{error}</div>
+        <div className="text-center">
+          <Button onClick={loadPendingUsers}>
+            <RefreshCw size={16} className="mr-2" />
+            Spróbuj ponownie
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white min-h-screen p-4 md:p-10">
+    <div className="bg-white text-[#2b2628] min-h-screen p-4 md:p-10">
       <div className="max-w-4xl mx-auto">
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6">
-          <button
-            className={`px-4 py-2 rounded-lg ${currentTab === "konta" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setCurrentTab("konta")}
-          >
-            Konta
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg ${currentTab === "zdjecia" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setCurrentTab("zdjecia")}
-          >
-            Zdjęcia
-          </button>
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold flex items-center justify-center">
+            <Clock size={32} className="mr-3 text-[#EA1A62]" />
+            Oczekujące konta
+          </h1>
+          <p className="text-lg text-gray-600 mt-2">
+            {pendingUsers.length} {pendingUsers.length === 1 ? "konto oczekuje" : "kont oczekuje"} na zatwierdzenie
+          </p>
         </div>
 
-        {/* Konta Tab */}
-        {currentTab === "konta" && (
-          <>
-            {pendingUsers.length === 0 ? (
-              <Card className="p-8 text-center">
-                <Users size={48} className="mx-auto text-gray-400 mb-4" />
-                <h2 className="text-2xl font-semibold mb-2 text-gray-600">
-                  Brak oczekujących kont
-                </h2>
-              </Card>
-            ) : (
-              <div className="space-y-6">
-                {pendingUsers.map((user) => {
-                  const age = user.dateOfBirth
-                    ? Math.floor((new Date() - new Date(user.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000))
-                    : null;
-                  const location = user.city && user.country ? `${user.city}, ${user.country}` : user.city || user.country || null;
+        {/* Refresh Button */}
+        <div className="mb-6 flex justify-end">
+          <Button onClick={loadPendingUsers} variant="outline">
+            <RefreshCw size={16} className="mr-2" />
+            Odśwież
+          </Button>
+        </div>
 
-                  return (
-                    <Card
-                      key={user.id}
-                      className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                      onClick={() => handleUserClick(user.id)}
-                    >
-                      <div className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div>
-                            <h2 className="text-xl font-semibold flex items-center gap-2">
-                              <User className="text-[#EA1A62]" size={20} />
+        {/* No Pending Users */}
+        {pendingUsers.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Users size={48} className="mx-auto text-gray-400 mb-4" />
+            <h2 className="text-2xl font-semibold mb-2 text-gray-600">Brak oczekujących kont</h2>
+            <p className="text-gray-500">Wszystkie konta zostały już zatwierdzone lub odrzucone.</p>
+          </Card>
+        ) : (
+          /* Pending Users List */
+          <div className="space-y-4">
+            {pendingUsers.map((user) => {
+              const age = calculateAge(user.dateOfBirth);
+              const location =
+                user.city && user.country
+                  ? `${user.city}, ${user.country}`
+                  : user.city || user.country || null;
+              const isProcessing = processingUsers.has(user.id);
+
+              return (
+                <Card
+                  key={user.id}
+                  className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => handleUserClick(user.id)}
+                >
+                  <div className="flex flex-col md:flex-row">
+                    {/* User Photo */}
+                        <div className="md:w-48 w-full h-48 md:h-auto bg-gray-200 flex-shrink-0 relative overflow-hidden rounded-lg">
+                        {user.mainPhoto ? (
+                        <img
+                            src={getPhotoUrl(user.mainPhoto.url)}
+                            alt={`${user.firstName} ${user.lastName}`}
+                            className="w-full h-full object-cover hover:scale-105 transition-transform"
+                        />
+                        ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                            <Camera size={32} className="text-gray-400" />
+                        </div>
+                        )}
+                        </div>
+
+                    {/* User Details */}
+                    <div className="flex-1 p-6">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between">
+                        <div className="flex-1">
+                          {/* Name and Basic Info */}
+                          <div className="mb-4">
+                            <h2 className="text-2xl font-bold text-[#2b2628] mb-2">
                               {user.firstName} {user.lastName}
                             </h2>
-                            {user.email && <p className="text-gray-600 text-sm mt-1 flex items-center gap-1"><Mail size={14} />{user.email}</p>}
+                            <div className="flex items-center text-gray-600 mb-1">
+                              <User size={16} className="mr-2" />
+                              <span className="font-medium">@{user.userName}</span>
+                              <span className="mx-2">•</span>
+                              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">{user.role}</span>
+                            </div>
+                            {location && (
+                              <div className="flex items-center text-gray-600 mb-1">
+                                <MapPin size={16} className="mr-2" />
+                                {location}
+                              </div>
+                            )}
                           </div>
-                          <div className="flex gap-2">
-                            <Button onClick={(e) => handleStatusUpdate(user.id, "Active", e)} disabled={processingUsers.has(user.id)} className="bg-green-600 text-white">Akceptuj</Button>
-                            <Button onClick={(e) => handleStatusUpdate(user.id, "Rejected", e)} disabled={processingUsers.has(user.id)} className="bg-red-600 text-white">Odrzuć</Button>
+
+                          {/* Contact & Personal Info */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div className="space-y-2">
+                              {user.email && (
+                                <div className="flex items-center text-gray-600">
+                                  <Mail size={16} className="mr-2" />
+                                  <span className="text-sm">{user.email}</span>
+                                </div>
+                              )}
+                              {user.phone && (
+                                <div className="flex items-center text-gray-600">
+                                  <Phone size={16} className="mr-2" />
+                                  <span className="text-sm">{user.phone}</span>
+                                </div>
+                              )}
+                              {age && (
+                                <div className="flex items-center text-gray-600">
+                                  <Calendar size={16} className="mr-2" />
+                                  <span className="text-sm">{age} lat ({formatDate(user.dateOfBirth)})</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              {user.height && (
+                                <div className="flex items-center text-gray-600">
+                                  <Ruler size={16} className="mr-2" />
+                                  <span className="text-sm">{user.height} cm</span>
+                                </div>
+                              )}
+                              {user.weight && (
+                                <div className="flex items-center text-gray-600">
+                                  <Weight size={16} className="mr-2" />
+                                  <span className="text-sm">{user.weight} kg</span>
+                                </div>
+                              )}
+                              {user.hairColor && (
+                                <div className="flex items-center text-gray-600">
+                                  <Palette size={16} className="mr-2" />
+                                  <span className="text-sm">{user.hairColor}</span>
+                                </div>
+                              )}
+                              {user.clothingSize && (
+                                <div className="flex items-center text-gray-600">
+                                  <Tag size={16} className="mr-2" />
+                                  <span className="text-sm">Rozmiar: {user.clothingSize}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Description */}
+                          {user.description && (
+                            <div className="mb-4">
+                              <p className="text-gray-700 text-sm leading-relaxed">{user.description}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex flex-row md:flex-col gap-2 mt-4 md:mt-0 md:ml-6">
+                          <Button
+                            onClick={(e) => handleUserClick(user.id)}
+                            variant="outline"
+                            size="sm"
+                            className="flex items-center"
+                          >
+                            <Eye size={16} className="mr-2" />
+                            Profil
+                          </Button>
+
+                          <Button
+                            onClick={(e) => handleStatusUpdate(user.id, 'Active', e)}
+                            variant="primary"
+                            size="sm"
+                            disabled={isProcessing}
+                            className="flex items-center bg-green-600 hover:bg-green-700"
+                          >
+                            {isProcessing ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            ) : (
+                              <Check size={16} className="mr-2" />
+                            )}
+                            Zaakceptuj
+                          </Button>
+
+                          <Button
+                            onClick={(e) => handleStatusUpdate(user.id, 'Rejected', e)}
+                            variant="primary"
+                            size="sm"
+                            disabled={isProcessing}
+                            className="flex items-center bg-red-600 hover:bg-red-700"
+                          >
+                            {isProcessing ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            ) : (
+                              <X size={16} className="mr-2" />
+                            )}
+                            Odrzuć
+                          </Button>
                         </div>
                       </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Zdjęcia Tab */}
-        {currentTab === "zdjecia" && (
-          <div className="space-y-6">
-            {loadingPhotos ? (
-              <div>Ładowanie zdjęć...</div>
-            ) : pendingPhotos.length === 0 ? (
-              <div className="text-center text-gray-500">Brak oczekujących zdjęć</div>
-            ) : (
-              pendingPhotos.map((user) => (
-                <Card key={user.userId} className="p-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="font-bold">{user.firstName} {user.lastName} (@{user.userName})</h3>
-                    <div className="flex gap-2">
-                      <Button onClick={() => handlePhotoBatchStatus(user.userId, "Active")}>Zaakceptuj wszystkie</Button>
-                      <Button onClick={() => handlePhotoBatchStatus(user.userId, "Rejected")}>Odrzuć wszystkie</Button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {user.photos.map((photo) => (
-                      <div key={photo.id} className="relative border rounded overflow-hidden">
-                        <img src={getPhotoUrl(photo.url)} className="w-full h-32 object-cover" />
-                        <div className="absolute bottom-2 left-2 flex gap-1">
-                          <Button size="sm" onClick={() => handlePhotoStatus(photo.id, "Active", user.userId)}>✔</Button>
-                          <Button size="sm" onClick={() => handlePhotoStatus(photo.id, "Rejected", user.userId)}>✖</Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </Card>
-              ))
-            )}
+              );
+            })}
           </div>
         )}
       </div>
