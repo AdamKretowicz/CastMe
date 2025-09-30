@@ -1,5 +1,6 @@
 ﻿using Application.Auth;
 using Application.Interfaces;
+using Azure.Storage.Blobs;
 using CastMe.Api.Features.Photos;
 using CastMe.UserApi.Services;
 using Infrastructure.Auth;
@@ -24,6 +25,11 @@ using WebApi.Services.Photo;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddNewtonsoftJson();
+
+//Blob connection string
+var blobConnectionString = builder.Configuration["BlobStorage"];
+var blobContainerName = builder.Configuration["BlobContainer"];
+
 
 // Swagger z Bearer do logowania na testy
 builder.Services.AddEndpointsApiExplorer();
@@ -122,6 +128,8 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+//Blob Service Client
+builder.Services.AddSingleton(x => new BlobContainerClient(blobConnectionString, blobContainerName));
 
 // Utworzone serwisy 
 builder.Services.AddScoped<UserService>();
@@ -139,6 +147,7 @@ builder.Services.AddTransient<IExperienceService, ExperienceService>();
 builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<FavouriteService>();
 builder.Services.AddScoped<ICastingBannerService, CastingBannerService>();
+
 
 
 
