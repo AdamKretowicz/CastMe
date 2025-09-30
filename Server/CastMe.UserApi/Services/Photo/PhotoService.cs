@@ -136,7 +136,8 @@ namespace CastMe.Api.Features.Photos
             SizeBytes = p.SizeBytes,
             Order = p.Order,
             IsMain = p.IsMain,
-            CreatedAtUtc = p.CreatedAtUtc
+            CreatedAtUtc = p.CreatedAtUtc,
+            UserId = p.UserId
         };
 
         public async Task UpdatePhotoStatus(List<PhotoDtoUpdate> photos, CancellationToken ct = default)
@@ -146,7 +147,7 @@ namespace CastMe.Api.Features.Photos
                 var entity = await _db.Photos.FirstOrDefaultAsync(p => p.Id == photo.Id);
                 if (entity != null && photo.PhotoStatus == PhotoStatus.Active)
                 {
-                    entity.IsActive = photo.IsActive;
+                    entity.IsActive = true;
                     
                 }
                 else if (entity != null && photo.PhotoStatus == PhotoStatus.Rejected)
@@ -158,9 +159,19 @@ namespace CastMe.Api.Features.Photos
                     throw new KeyNotFoundException("Photo not found.");
                 }
             }
+            await _db.SaveChangesAsync();
             
         }
 
+        public async Task<IReadOnlyList<PhotoDto>> GetAllPendingPhotos(CancellationToken ct = default)
+        {
+            var items = await _db.Photos
+                .Where(p =>p.IsActive == false)
+                .OrderBy(p => p.Order).ThenByDescending(p => p.IsMain)
+                .AsNoTracking()
+                .ToListAsync(ct);
 
+            return items.Select(Map).ToList();
+        }
     }
 }

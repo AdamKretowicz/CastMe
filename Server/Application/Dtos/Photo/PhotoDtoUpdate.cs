@@ -10,7 +10,6 @@ namespace Application.Dtos.Photo
     public class PhotoDtoUpdate
     {
         public Guid Id { get; set; }
-        public bool IsActive { get; set;} = false;
 
         public PhotoStatus PhotoStatus { get; set; } = PhotoStatus.Pending;
 

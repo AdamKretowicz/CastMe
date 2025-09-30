@@ -30,7 +30,7 @@ namespace Application.Mapper
 
         public static Photo PhotoDtoUpdate(this Photo photo, PhotoDtoUpdate dto)
         {
-            photo.IsActive = dto.IsActive;
+            photo.IsActive = true;
             return photo;
         }
     }

@@ -12,6 +12,8 @@ namespace Application.Dtos.Photo
         public bool IsMain { get; set; }
         public int Order { get; set; }
         public DateTime CreatedAtUtc { get; set; }
-        
+
+        public Guid UserId { get; set; }
+
     }
 }
