@@ -417,95 +417,104 @@ export const filterUsers = async (filters, accessToken) => {
   };
 };
 
-export async function fetchPendingUsers(token) {
+/**
+ * Fetch all pending users
+ * @param {string} accessToken - Authentication token
+ * @returns {Promise<Array>} - Array of pending users
+ */
+export const fetchPendingUsers = async (accessToken) => {
   const response = await fetch(`${API_BASE_URL}/user/Pending`, {
-    method: "GET",
+    method: 'GET',
     headers: {
-      "Accept": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'accept': 'application/json'
+    }
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Failed to fetch pending users");
+    throw new Error('Failed to fetch pending users');
   }
 
-  const data = await response.json();
-  return data;
-}
+  return await response.json();
+};
 
-export async function updateUserStatus(userId, status, token) {
+/**
+ * Update user status (accept or reject)
+ * @param {string} userId - User ID
+ * @param {string} status - Status to set ("Active" or "Rejected")
+ * @param {string} accessToken - Authentication token
+ * @returns {Promise<Object>} - Updated user data
+ */
+export const updateUserStatus = async (userId, status, accessToken) => {
   const response = await fetch(`${API_BASE_URL}/user/${userId}/statusUpdate`, {
-    method: "PUT",
+    method: 'PUT',
     headers: {
-      "Accept": "application/json",
-      "Content-Type": "application/json-patch+json",
-      "Authorization": `Bearer ${token}`,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json-patch+json',
+      'accept': 'application/json'
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({
+      status: status
+    })
   });
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Failed to update status for user ${userId}`);
+    throw new Error(`Failed to update user status to ${status}`);
   }
 
-  return response.json();
+  return await response.json();
 };
-// Fetch pending photos for a given user
-export const fetchPendingUserPhotos = async (userId, accessToken) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/photos/pending`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-      },
-    });
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `Failed to fetch pending photos for user ${userId}`);
+/**
+ * Fetch all pending photos for all users
+ * @param {string} accessToken - Authentication token
+ * @returns {Promise<Array>} - Array of pending photos
+ */
+export const fetchAllPendingPhotos = async (accessToken) => {
+  const response = await fetch(`${API_BASE_URL}/api/users/photos/allPending`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'accept': 'application/json'
     }
+  });
 
-    return await response.json();
-  } catch (error) {
-    console.error("Error fetching pending photos:", error);
-    throw error;
+  if (!response.ok) {
+    throw new Error('Failed to fetch all pending photos');
   }
-};
 
-// Approve or reject a photo
-export const updateUserPhotoStatus = async (photoId, status, accessToken) => {
-  try {
-    const body = [
-      {
-        id: photoId,
-        isActive: status === "Active", // true if approving
-        photoStatus: status, // e.g., "Active" or "Rejected"
-      },
-    ];
-
-    const response = await fetch(`${API_BASE_URL}/api/users/${photoId}/photos`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json-patch+json",
-        "Authorization": `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `Failed to update status for photo ${photoId}`);
-    }
-
-    const text = await response.text();
-    return text ? JSON.parse(text) : true; // allow empty response
-  } catch (error) {
-    console.error("Error updating photo status:", error);
-    throw error;
-  }
+  return await response.json();
 };
 
 
+/**
+ * Update photo status (accept or reject)
+ * @param {string} userId - User ID
+ * @param {string} photoId - Photo ID
+ * @param {string} status - Status to set ("Active" or "Rejected")
+ * @param {string} accessToken - Authentication token
+ * @returns {Promise<Object>} - Updated photo data
+ */
+export const updatePhotoStatus = async (photosToUpdate, token) => {
+  
+  const payload = photosToUpdate.map(photo => ({
+    id: photo.id,
+    photoStatus: photo.photoStatus // or photoStatus directly
+  }));
+
+  const response = await fetch('https://localhost:7080/api/users/photos/updateStatus', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json-patch+json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update photo status');
+  }
+
+  return true;
+};

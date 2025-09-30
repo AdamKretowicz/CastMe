@@ -211,12 +211,12 @@ const ModelDashboard = () => {
           {/* Available Castings */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader>
+              <Card.Header>
                 <h2 className="text-xl font-semibold text-[#2B2628]">
                   Dostępne castingi
                 </h2>
-              </CardHeader>
-              <CardContent>
+              </Card.Header>
+              <Card.Content>
                 <div className="space-y-6">
                   {castings.map((casting) => (
                     <div
@@ -281,7 +281,7 @@ const ModelDashboard = () => {
                     </div>
                   ))}
                 </div>
-              </CardContent>
+              </Card.Content>
             </Card>
           </div>
 
