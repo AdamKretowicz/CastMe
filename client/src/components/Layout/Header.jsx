@@ -34,7 +34,10 @@ const Header = () => {
         { to: "/castings", label: "Castingi", icon: <Camera className="w-5 h-5" /> },
         { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
         ...(currentUser.role === "Admin"
-          ? [{ to: "/favorites", label: "Ulubione", icon: <Heart className="w-4 h-4" /> }]
+          ? [
+              { to: "/favorites", label: "Ulubione", icon: <Heart className="w-4 h-4" /> },
+              { to: "/pending-accounts", label: "Konta oczekujące", icon: <User className="w-4 h-4" /> }
+          ]
           : []),
       ]
     : [

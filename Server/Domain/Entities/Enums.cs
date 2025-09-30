@@ -37,6 +37,15 @@ namespace CastMe.Domain.Entities
         Pending = 2,
         Rejected = 3
     }
+
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum PhotoStatus
+    {
+        Active = 1,
+        Pending = 2,
+        Rejected = 3
+    }
     
 
 }

@@ -249,57 +249,42 @@ const ModelDashboard = () => {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {/* Roles */}
-                          {casting.roles.map((roleObj, index) => (
+                          {casting.roles.map((role, index) => (
                             <span
-                              key={`${roleObj.role}-${index}`} // unique string key
+                              key={typeof role === "string" ? role : role.id || index}
                               className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                             >
-                              {roleObj.role} ({roleObj.acceptedCount}/{roleObj.capacity})
+                              {typeof role === "string" ? role : role.name}
                             </span>
                           ))}
                         </div>
                       </div>
 
-                      <p className="text-gray-700 mb-4">
-                        {casting.description}
-                      </p>
+                      <p className="text-gray-700 mb-4">{casting.description}</p>
 
                       {casting.tags.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-4">
-                          {/* Tags */}
-                          {casting.tags.map((tagObj, index) => (
+                          {casting.tags.map((tag, index) => (
                             <span
-                              key={`${tagObj.name}-${index}`} // unique string key
-                              className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#FFFFFF] text-xs rounded-full"
+                              key={typeof tag === "string" ? tag : tag.id || index}
+                              className="px-2 py-1 bg-[#EA1A62] bg-opacity-10 text-[#EA1A62] text-xs rounded-full"
                             >
-                              {tagObj.name}
+                              {typeof tag === "string" ? tag : tag.name}
                             </span>
                           ))}
-
                         </div>
                       )}
 
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm text-gray-500">
-                          Opublikowano: {formatDate(casting.createdAt)}
-                        </p>
-                        {hasApplied(casting.id) ? (
-                          <Button variant="secondary" disabled>
-                            Już się zgłosiłeś
-                          </Button>
-                        ) : (
-                          <Button onClick={() => setSelectedCasting(casting)}>
-                            Zgłoś się
-                          </Button>
-                        )}
-                      </div>
+                      <Button onClick={() => setSelectedCasting(casting)}>
+                        Zgłoś się
+                      </Button>
                     </div>
                   ))}
                 </div>
               </Card.Content>
             </Card>
           </div>
+
         </div>
       </div>
 

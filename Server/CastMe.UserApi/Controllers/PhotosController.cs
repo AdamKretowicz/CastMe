@@ -31,6 +31,17 @@ namespace CastMe.Api.Controllers
             return Ok(items);
         }
 
+        /// <summary>Lista zdjęć użytkownika, zwraca również zdjęcia zaakceptowane (publiczna, zwraca URL-e do statycznych plików).</summary>
+        [HttpGet("pending")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(IReadOnlyList<PhotoDto>), StatusCodes.Status200OK)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> GetRejectedUserPhotos([FromRoute] Guid userId, CancellationToken ct)
+        {
+            var items = await _service.GetPendingUserPhotosAsync(userId, ct);
+            return Ok(items);
+        }
+
         /// <summary>Upload jednego zdjęcia (multipart/form-data, pole "file").</summary>
         [HttpPost]
         [Authorize]
@@ -97,5 +108,17 @@ namespace CastMe.Api.Controllers
             await _service.ReorderAsync(userId, body.OrderedPhotoIds, ct);
             return NoContent();
         }
+
+        [HttpPut]
+        [ProducesResponseTypeAttribute(StatusCodes.Status204NoContent)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> UpdatePhotoStatus([FromBody] List<PhotoDtoUpdate> photos, CancellationToken ct)
+        {
+            if (photos == null || photos.Count == 0)
+                return BadRequest("No photos provided.");
+            await _service.UpdatePhotoStatus(photos, ct);
+            return NoContent();
+        }
+
     }
 }

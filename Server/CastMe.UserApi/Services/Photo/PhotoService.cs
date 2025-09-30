@@ -1,4 +1,5 @@
 ﻿using Application.Dtos.Photo;
+using CastMe.Domain.Entities;
 using Domain.Entities;
 using Infrastructure.Context;
 using Infrastructure.Storage;
@@ -23,13 +24,25 @@ namespace CastMe.Api.Features.Photos
         public async Task<IReadOnlyList<PhotoDto>> GetUserPhotosAsync(Guid userId, CancellationToken ct = default)
         {
             var items = await _db.Photos
-                .Where(p => p.UserId == userId)
+                .Where(p => p.UserId == userId && p.IsActive == true)
                 .OrderBy(p => p.Order).ThenByDescending(p => p.IsMain)
                 .AsNoTracking()
                 .ToListAsync(ct);
 
             return items.Select(Map).ToList();
         }
+
+        public async Task<IReadOnlyList<PhotoDto>> GetPendingUserPhotosAsync(Guid userId, CancellationToken ct = default)
+        {
+            var items = await _db.Photos
+                .Where(p => p.UserId == userId && p.IsActive == false)
+                .OrderBy(p => p.Order).ThenByDescending(p => p.IsMain)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
+            return items.Select(Map).ToList();
+        }
+
 
         public async Task<PhotoDto> UploadAsync(Guid userId, IFormFile file, CancellationToken ct = default)
         {
@@ -64,7 +77,8 @@ namespace CastMe.Api.Features.Photos
                 SizeBytes = file.Length,
                 Url = url,
                 Order = maxOrder + 1,
-                IsMain = false
+                IsMain = false,
+                IsActive = false,
             };
 
             _db.Photos.Add(entity);
@@ -124,5 +138,29 @@ namespace CastMe.Api.Features.Photos
             IsMain = p.IsMain,
             CreatedAtUtc = p.CreatedAtUtc
         };
+
+        public async Task UpdatePhotoStatus(List<PhotoDtoUpdate> photos, CancellationToken ct = default)
+        {
+            foreach (var photo in photos)
+            {
+                var entity = await _db.Photos.FirstOrDefaultAsync(p => p.Id == photo.Id);
+                if (entity != null && photo.PhotoStatus == PhotoStatus.Active)
+                {
+                    entity.IsActive = photo.IsActive;
+                    
+                }
+                else if (entity != null && photo.PhotoStatus == PhotoStatus.Rejected)
+                {
+                    await DeleteAsync(entity.UserId, entity.Id, ct);
+                }
+                else
+                {
+                    throw new KeyNotFoundException("Photo not found.");
+                }
+            }
+            
+        }
+
+
     }
 }
