@@ -61,14 +61,14 @@ export default function FavoritesPage() {
     setRoles(rolesData || []);
     setFavoriteUsers(favoritesData || []);
     
-    // Auto-expand roles that have favorites
-    const rolesWithFavorites = new Set();
-    favoritesData?.forEach(user => {
-      if (user.role) {
-        rolesWithFavorites.add(user.role);
-      }
-    });
-    setExpandedRoles(rolesWithFavorites);
+    // // Auto-expand roles that have favorites
+    // const rolesWithFavorites = new Set();
+    // favoritesData?.forEach(user => {
+    //   if (user.role) {
+    //     rolesWithFavorites.add(user.role);
+    //   }
+    // });
+    // setExpandedRoles(rolesWithFavorites);
 
     // Load profiles for all users in expanded roles
     favoritesData?.forEach(user => loadUserProfile(user.id));

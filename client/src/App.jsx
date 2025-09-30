@@ -2,8 +2,11 @@ import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { CastingProvider } from "./context/CastingContext";
+import { FilterProvider } from "./context/FilterProvider";
+
 import Header from "./components/Layout/Header";
 import Footer from "./components/Layout/Footer";
+
 import HomePage from "./Pages/HomePage";
 import LoginPage from "./Pages/LoginPage";
 import RegisterPage from "./Pages/RegisterPage";
@@ -12,15 +15,14 @@ import ProfilePage from "./Pages/ProfilePage";
 import AboutPage from "./Pages/About";
 import EditProfilePage from "./Pages/EditProfilePage";
 import FavoritesPage from "./Pages/FavoritesPage";
-import ProfileFilterPage from "./Pages/ProfilePage";
-import { FilterProvider } from "./context/FilterProvider";
+import ProfileFilterPage from "./Pages/ProfileFilterPage"; // ✅ corrected import
 import StatusUpdatePage from "./Pages/StatusUpdatePage";
 
 function App() {
   return (
     <AuthProvider>
       <CastingProvider>
-        <FilterProvider> {/* Wrap all routes here */}
+        <FilterProvider>
           <Router>
             <div className="min-h-screen flex flex-col">
               <Header />
@@ -46,7 +48,5 @@ function App() {
     </AuthProvider>
   );
 }
-
-
 
 export default App;
