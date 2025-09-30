@@ -16,13 +16,6 @@ import {
   Clock,
   User,
   MapPin,
-  Phone,
-  Mail,
-  Calendar,
-  Ruler,
-  Weight,
-  Palette,
-  Tag,
   Camera,
   Check,
   X,
@@ -31,6 +24,8 @@ import {
   Eye,
   Image
 } from "lucide-react";
+import ConfirmModal from "../components/UI/ConfirmModal";
+
 
 export default function StatusUpdatePage() {
   const navigate = useNavigate();
@@ -48,31 +43,35 @@ export default function StatusUpdatePage() {
   const [usersWithPhotos, setUsersWithPhotos] = useState([]);
   const [userPendingPhotos, setUserPendingPhotos] = useState({});
   const [loadingPhotos, setLoadingPhotos] = useState(true);
-  const [setProcessingPhotos] = useState(new Set());
 
   // Batched photo updates
   const [batchedPhotoUpdates, setBatchedPhotoUpdates] = useState([]);
 
+    const [confirmModal, setConfirmModal] = useState({
+        open: false,
+        title: "",
+        message: "",
+        onConfirm: null,
+        });
+
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!currentUser) return;
-    if (!accessToken) {
-      navigate("/login");
-      return;
-    }
-    if (currentUser.role !== "Admin") {
-      navigate("/");
-      return;
-    }
+  if (authLoading) return;
+  if (!currentUser) return;
+  if (!accessToken) {
+    navigate("/login");
+    return;
+  }
+  if (currentUser.role !== "Admin") {
+    navigate("/");
+    return;
+  }
 
-    if (activeTab === 'users') {
-      loadPendingUsers();
-    } else {
-      loadPendingPhotos();
-    }
-  }, [authLoading, currentUser, accessToken, navigate, activeTab]);
+  loadPendingUsers();
+  loadPendingPhotos();
+}, [authLoading, currentUser, accessToken, navigate]);
+
 
   // Load users
   const loadPendingUsers = async () => {
@@ -116,27 +115,53 @@ export default function StatusUpdatePage() {
   };
 
   // Accept/reject user
-  const handleStatusUpdate = async (userId, status, event) => {
-    event.stopPropagation();
-    if (!window.confirm(`Czy na pewno chcesz ${status === 'Active' ? 'zaakceptować' : 'odrzucić'} użytkownika?`)) return;
+  const handleStatusUpdate = (userId, status, event) => {
+  event.stopPropagation();
 
-    setProcessingUsers(prev => new Set(prev).add(userId));
+  setConfirmModal({
+    open: true,
+    title: status === 'Active' ? 'Zaakceptuj użytkownika?' : 'Odrzuć użytkownika?',
+    message: `Czy na pewno chcesz ${status === 'Active' ? 'zaakceptować' : 'odrzucić'} użytkownika?`,
+    onConfirm: async () => {
+      setConfirmModal(prev => ({ ...prev, open: false }));
+      setProcessingUsers(prev => new Set(prev).add(userId));
+      try {
+        await updateUserStatus(userId, status, accessToken);
+        setPendingUsers(prev => prev.filter(u => u.id !== userId));
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Błąd aktualizacji użytkownika");
+      } finally {
+        setProcessingUsers(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(userId);
+          return newSet;
+        });
+      }
+    },
+  });
+};
 
-    try {
-      await updateUserStatus(userId, status, accessToken);
-      setPendingUsers(prev => prev.filter(u => u.id !== userId));
-      alert(status === 'Active' ? "Użytkownik zaakceptowany" : "Użytkownik odrzucony");
-    } catch (err) {
-      console.error(err);
-      setError(err.message || "Błąd aktualizacji użytkownika");
-    } finally {
-      setProcessingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(userId);
-        return newSet;
-      });
-    }
-  };
+    // Mark all photos of a user as accepted
+    const handleMarkAllAccepted = (userId) => {
+    const photos = userPendingPhotos[userId] || [];
+    setBatchedPhotoUpdates(prev => {
+        const otherUpdates = prev.filter(p => !photos.some(photo => photo.id === p.id));
+        const newUpdates = photos.map(photo => ({ id: photo.id, photoStatus: 'Active' }));
+        return [...otherUpdates, ...newUpdates];
+    });
+    };
+
+    // Mark all photos of a user as rejected
+    const handleMarkAllRejected = (userId) => {
+    const photos = userPendingPhotos[userId] || [];
+    setBatchedPhotoUpdates(prev => {
+        const otherUpdates = prev.filter(p => !photos.some(photo => photo.id === p.id));
+        const newUpdates = photos.map(photo => ({ id: photo.id, photoStatus: 'Rejected' }));
+        return [...otherUpdates, ...newUpdates];
+    });
+    };
+
 
   // Batch individual photo updates
     const handleBatchPhotoUpdate = (photoId, status) => {
@@ -157,35 +182,42 @@ export default function StatusUpdatePage() {
 
 
   // Submit all batched photo updates
-  const handleSubmitAllPhotoUpdates = async () => {
-    if (batchedPhotoUpdates.length === 0) return;
-    if (!window.confirm(`Czy na pewno chcesz zatwierdzić ${batchedPhotoUpdates.length} zmian?`)) return;
+  const handleSubmitAllPhotoUpdates = () => {
+  if (batchedPhotoUpdates.length === 0) return;
 
-    try {
-      await updatePhotoStatus(batchedPhotoUpdates, accessToken);
+  setConfirmModal({
+    open: true,
+    title: "Zatwierdź wszystkie zmiany zdjęć?",
+    message: "Czy na pewno chcesz zatwierdzić wszystkie zaznaczone zmiany zdjęć?",
+    onConfirm: async () => {
+      setConfirmModal(prev => ({ ...prev, open: false }));
+      try {
+        await updatePhotoStatus(batchedPhotoUpdates, accessToken);
 
-      // Remove updated photos from state
-      setUserPendingPhotos(prev => {
-        const newPhotos = { ...prev };
-        batchedPhotoUpdates.forEach(p => {
-          Object.keys(newPhotos).forEach(uid => {
-            newPhotos[uid] = newPhotos[uid].filter(photo => photo.id !== p.id);
+        // Remove updated photos from state
+        setUserPendingPhotos(prev => {
+          const newPhotos = { ...prev };
+          batchedPhotoUpdates.forEach(p => {
+            Object.keys(newPhotos).forEach(uid => {
+              newPhotos[uid] = newPhotos[uid].filter(photo => photo.id !== p.id);
+            });
           });
+          return newPhotos;
         });
-        return newPhotos;
-      });
 
-      setUsersWithPhotos(prevUsers =>
-        prevUsers.filter(u => (userPendingPhotos[u.id] || []).length > 0)
-      );
+        setUsersWithPhotos(prevUsers =>
+          prevUsers.filter(u => (userPendingPhotos[u.id] || []).length > 0)
+        );
 
-      setBatchedPhotoUpdates([]);
-      setProcessingPhotos(new Set());
-    } catch (err) {
-      console.error(err);
-      setError("Błąd przy wysyłaniu zmian zdjęć: " + err.message);
-    }
-  };
+        setBatchedPhotoUpdates([]);
+      } catch (err) {
+        console.error(err);
+        setError("Błąd przy wysyłaniu zmian zdjęć: " + err.message);
+      }
+    },
+  });
+};
+
 
   const handleUserClick = (userId) => navigate(`/profile/${userId}`);
 
@@ -299,66 +331,92 @@ export default function StatusUpdatePage() {
 
         {/* Photos Tab */}
         {activeTab==='photos' && (
-          usersWithPhotos.length===0 ? (
-            <Card className="p-8 text-center">
-              <Image size={48} className="mx-auto text-gray-400 mb-4"/>
-              <h2 className="text-2xl font-semibold mb-2 text-gray-600">Brak oczekujących zdjęć</h2>
-              <p className="text-gray-500">Wszystkie zdjęcia zostały już zatwierdzone lub odrzucone.</p>
-            </Card>
-          ) : (
-            <div className="space-y-6">
-              {usersWithPhotos.map(user => {
-                const photos = userPendingPhotos[user.id] || [];
-                return (
-                  <Card key={user.id} className="overflow-hidden">
-                    <div className="bg-gray-50 p-4 border-b border-gray-200 flex items-center justify-between">
-                      <div className="flex items-center gap-4 cursor-pointer hover:opacity-80" onClick={()=>handleUserClick(user.id)}>
-                        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
-                          {user.mainPhoto ? <img src={getPhotoUrl(user.mainPhoto.url)} alt="" className="w-full h-full object-cover"/> : <User size={24} className="text-gray-400"/>}
+            usersWithPhotos.length===0 ? (
+                <Card className="p-8 text-center">
+                <Image size={48} className="mx-auto text-gray-400 mb-4"/>
+                <h2 className="text-2xl font-semibold mb-2 text-gray-600">Brak oczekujących zdjęć</h2>
+                <p className="text-gray-500">Wszystkie zdjęcia zostały już zatwierdzone lub odrzucone.</p>
+                </Card>
+            ) : (
+                <>
+                {usersWithPhotos.map(user => {
+                    const photos = userPendingPhotos[user.id] || [];
+                    return (
+                    <Card key={user.id} className="overflow-hidden">
+                        {/* User info and Accept/Reject all buttons */}
+                        <div className="bg-gray-50 p-4 border-b border-gray-200 flex items-center justify-between">
+                        <div className="flex items-center gap-4 cursor-pointer hover:opacity-80" onClick={() => handleUserClick(user.id)}>
+                            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                            {user.mainPhoto ? <img src={getPhotoUrl(user.mainPhoto.url)} alt="" className="w-full h-full object-cover"/> : <User size={24} className="text-gray-400"/>}
+                            </div>
+                            <div>
+                            <h3 className="text-xl font-bold">{user.firstName} {user.lastName}</h3>
+                            <p className="text-sm text-gray-600">@{user.userName}</p>
+                            </div>
                         </div>
-                        <div>
-                          <h3 className="text-xl font-bold">{user.firstName} {user.lastName}</h3>
-                          <p className="text-sm text-gray-600">@{user.userName}</p>
+                        <div className="flex gap-2">
+                            <Button
+                                onClick={() => handleMarkAllAccepted(user.id)}
+                                size="sm"
+                                className="bg-green-400 text-green-800 hover:bg-green-300 focus:ring-green-300"
+                            >
+                                Zaakceptuj wszystkie ({photos.length})
+                            </Button>
+                            <Button
+                                onClick={() => handleMarkAllRejected(user.id)}
+                                size="sm"
+                                className="bg-red-400 text-red-800 hover:bg-red-300 focus:ring-red-300"
+                            >
+                                Odrzuć wszystkie
+                            </Button>
+                            </div>
                         </div>
-                      </div>
-                    </div>
-                    <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                      {photos.map(photo => {
-                        return (
-                            <div key={photo.id} 
-                                className={`relative group rounded-lg overflow-hidden border-2 transition-all
-                                            ${batchedPhotoUpdates.find(p => p.id === photo.id)?.photoStatus === 'Active' ? 'border-green-500' : ''}
-                                            ${batchedPhotoUpdates.find(p => p.id === photo.id)?.photoStatus === 'Rejected' ? 'border-red-500' : 'border-gray-200'}
-                                            hover:border-[#EA1A62]`}>
+
+                        {/* Photos grid */}
+                        <div className="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {photos.map(photo => (
+                            <div
+                            key={photo.id}
+                            className={`relative group rounded-lg overflow-hidden border-2 transition-all
+                                ${batchedPhotoUpdates.find(p => p.id === photo.id)?.photoStatus === 'Active' ? 'border-green-500' : ''}
+                                ${batchedPhotoUpdates.find(p => p.id === photo.id)?.photoStatus === 'Rejected' ? 'border-red-500' : 'border-gray-200'}
+                                hover:border-[#EA1A62]`}
+                            >
                             <img src={getPhotoUrl(photo.url)} alt={photo.originalFileName} className="w-full aspect-square object-cover"/>
                             <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-60 transition-all flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                                <Button onClick={()=>handleBatchPhotoUpdate(photo.id,'Active')} size="sm" className="flex items-center bg-green-600 hover:bg-green-700">
+                                <Button onClick={() => handleBatchPhotoUpdate(photo.id,'Active')} size="sm" className="flex items-center bg-green-600 hover:bg-green-700">
                                 <Check size={16}/>
                                 </Button>
-                                <Button onClick={()=>handleBatchPhotoUpdate(photo.id,'Rejected')} size="sm" className="flex items-center bg-red-600 hover:bg-red-700">
+                                <Button onClick={() => handleBatchPhotoUpdate(photo.id,'Rejected')} size="sm" className="flex items-center bg-red-600 hover:bg-red-700">
                                 <X size={16}/>
                                 </Button>
                             </div>
                             </div>
+                        ))}
+                        </div>
+                    </Card>
+                    );
+                })}
 
-                        );
-                      })}
-                    </div>
-                  </Card>
-                );
-              })}
+                {/* Submit all changes button */}
+                <div className="mt-6 flex justify-end">
+                    <Button onClick={handleSubmitAllPhotoUpdates} size="md" className="bg-blue-600 hover:bg-blue-700" disabled={batchedPhotoUpdates.length === 0}>
+                    Zatwierdź wszystkie zmiany ({batchedPhotoUpdates.length})
+                    </Button>
+                </div>
+                </>
+            )
+            )}
 
-              {/* Submit all changes button */}
-              <div className="mt-6 flex justify-end">
-                <Button onClick={handleSubmitAllPhotoUpdates} size="md" className="bg-blue-600 hover:bg-blue-700" disabled={batchedPhotoUpdates.length===0}>
-                  Zatwierdź wszystkie zmiany ({batchedPhotoUpdates.length})
-                </Button>
-              </div>
-            </div>
-          )
-        )}
 
       </div>
+      <ConfirmModal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        onClose={() => setConfirmModal(prev => ({ ...prev, open: false }))}
+        onConfirm={confirmModal.onConfirm}
+        />
     </div>
   );
 }
