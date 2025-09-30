@@ -353,3 +353,159 @@ export const fetchUserRoles = async (accessToken) => {
     throw error;
   }
 };
+
+
+// Filter users
+export const filterUsers = async (filters, accessToken) => {
+  const queryParams = new URLSearchParams();
+  
+  // Simple filters
+  if (filters.minAge) queryParams.append("MinAge", filters.minAge);
+  if (filters.maxAge) queryParams.append("MaxAge", filters.maxAge);
+  if (filters.minHeight) queryParams.append("MinHeight", filters.minHeight);
+  if (filters.maxHeight) queryParams.append("MaxHeight", filters.maxHeight);
+  if (filters.minWeight) queryParams.append("MinWeight", filters.minWeight);
+  if (filters.maxWeight) queryParams.append("MaxWeight", filters.maxWeight);
+
+  // Array filters – append each value separately
+  if (filters.hairColors?.length) {
+    filters.hairColors.forEach(color => queryParams.append("HairColor", color));
+  }
+  if (filters.clothingSizes?.length) {
+    filters.clothingSizes.forEach(size => queryParams.append("ClothingSize", size));
+  }
+  if (filters.cities?.length) {
+    filters.cities.forEach(city => queryParams.append("City", city));
+  }
+
+  // Pagination
+  queryParams.append("pageNumber", filters.pageNumber || 1);
+  queryParams.append("pageSize", filters.pageSize || 12);
+
+  const response = await fetch(
+    `${API_BASE_URL}/FilterUsers?${queryParams.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch filtered users");
+  }
+
+  const data = await response.json();
+
+  return {
+    users: Array.isArray(data) ? data : data.users || data.items || [],
+    totalCount:
+      data.totalCount ||
+      data.total ||
+      (Array.isArray(data) ? data.length : 0),
+    currentPage: data.currentPage || data.page || filters.pageNumber || 1,
+    totalPages:
+      data.totalPages ||
+      Math.ceil(
+        (data.totalCount ||
+          data.total ||
+          (Array.isArray(data) ? data.length : 0)) /
+          (filters.pageSize || 12)
+      ),
+  };
+};
+
+export async function fetchPendingUsers(token) {
+  const response = await fetch(`${API_BASE_URL}/user/Pending`, {
+    method: "GET",
+    headers: {
+      "Accept": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Failed to fetch pending users");
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+export async function updateUserStatus(userId, status, token) {
+  const response = await fetch(`${API_BASE_URL}/user/${userId}/statusUpdate`, {
+    method: "PUT",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json-patch+json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || `Failed to update status for user ${userId}`);
+  }
+
+  return response.json();
+};
+// Fetch pending photos for a given user
+export const fetchPendingUserPhotos = async (userId, accessToken) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${userId}/photos/pending`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Failed to fetch pending photos for user ${userId}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching pending photos:", error);
+    throw error;
+  }
+};
+
+// Approve or reject a photo
+export const updateUserPhotoStatus = async (photoId, status, accessToken) => {
+  try {
+    const body = [
+      {
+        id: photoId,
+        isActive: status === "Active", // true if approving
+        photoStatus: status, // e.g., "Active" or "Rejected"
+      },
+    ];
+
+    const response = await fetch(`${API_BASE_URL}/api/users/${photoId}/photos`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json-patch+json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Failed to update status for photo ${photoId}`);
+    }
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : true; // allow empty response
+  } catch (error) {
+    console.error("Error updating photo status:", error);
+    throw error;
+  }
+};
+
+
