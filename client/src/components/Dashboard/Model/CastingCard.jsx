@@ -10,9 +10,41 @@ export default function CastingCard({
   bannerUrl,
   hasApplied,
   onApply,
+  disabled,
+  /** NOWE: tryb organizatora — wtedy karta jest klikalna i pokazuje tooltip zamiast przycisku */
+  isOrganizer = false,
+  onCardClick, // np. otwiera modal z uczestnikami (tylko dla organizatora)
 }) {
+  const isDisabled = hasApplied || disabled;
+  const btnLabel = hasApplied ? "Już się zgłosiłeś" : "Zgłoś się";
+  const btnVariant = hasApplied ? "secondary" : "primary";
+
+  const CardWrapper = ({ children }) => (
+    <div
+      className={[
+        "border border-gray-200 rounded-lg p-6 transition-colors",
+        isOrganizer ? "cursor-pointer hover:bg-gray-50" : "",
+      ].join(" ")}
+      onClick={isOrganizer ? onCardClick : undefined}
+      role={isOrganizer ? "button" : undefined}
+      tabIndex={isOrganizer ? 0 : undefined}
+      onKeyDown={
+        isOrganizer
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onCardClick?.();
+              }
+            }
+          : undefined
+      }
+    >
+      {children}
+    </div>
+  );
+
   return (
-    <div className="border border-gray-200 rounded-lg p-6">
+    <CardWrapper>
       <div className="w-full mb-3">
         {bannerUrl ? (
           <BannerImage
@@ -47,6 +79,9 @@ export default function CastingCard({
                 <span
                   key={idx}
                   className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                  title={`${getRoleDisplayName(role.role)} — zaakceptowano ${
+                    role.acceptedCount || 0
+                  } z ${role.capacity}`}
                 >
                   {getRoleDisplayName(role.role)} {role.acceptedCount || 0}/
                   {role.capacity}
@@ -82,14 +117,30 @@ export default function CastingCard({
         <p className="text-sm text-gray-500">
           Opublikowano: {formatDate(casting.createdAt)}
         </p>
-        {hasApplied ? (
-          <Button variant="secondary" disabled>
-            Już się zgłosiłeś
+
+        {isOrganizer ? (
+          <span className="text-sm text-gray-600">
+            Kliknij kartę, aby zobaczyć uczestników
+          </span>
+        ) : hasApplied ? (
+          <Button variant="secondary" disabled title={btnLabel}>
+            {btnLabel}
           </Button>
         ) : (
-          <Button onClick={onApply}>Zgłoś się</Button>
+          <Button
+            variant={btnVariant}
+            disabled={isDisabled}
+            onClick={(e) => {
+              if (isDisabled) return;
+              e.stopPropagation(); // żeby klik nie odpalił onCardClick
+              onApply?.();
+            }}
+            title={isDisabled ? btnLabel : undefined}
+          >
+            {btnLabel}
+          </Button>
         )}
       </div>
-    </div>
+    </CardWrapper>
   );
 }

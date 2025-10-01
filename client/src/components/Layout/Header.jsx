@@ -1,23 +1,29 @@
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
-import { Camera, User, Home, Info, Mail, MoreHorizontal } from "lucide-react";
+import {
+  Camera,
+  User,
+  Home,
+  Info,
+  Mail,
+  MoreHorizontal,
+  LayoutDashboard,
+} from "lucide-react";
+
 import { useAuth } from "../../context/AuthContext";
 import { useState, useEffect, useRef, useCallback } from "react";
 import Logo from "../../assets/LOGO.svg";
+import { apiFetch, getPhotoUrl } from "../../utils/api";
 
 /** Simple media query hook (no SSR crashes) */
 function useMediaQuery(query) {
   const getMatch = () =>
     typeof window !== "undefined" ? window.matchMedia(query).matches : false;
-
   const [matches, setMatches] = useState(getMatch);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia(query);
     const onChange = () => setMatches(mq.matches);
-    // modern browsers
     mq.addEventListener?.("change", onChange);
-    // fallback
     mq.addListener?.(onChange);
     onChange();
     return () => {
@@ -25,7 +31,6 @@ function useMediaQuery(query) {
       mq.removeListener?.(onChange);
     };
   }, [query]);
-
   return matches;
 }
 
@@ -40,14 +45,11 @@ function useMenu() {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setOpen(true);
   }, []);
-
   const closeNow = useCallback((delay = 0) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (delay > 0) {
       timeoutRef.current = setTimeout(() => setOpen(false), delay);
-    } else {
-      setOpen(false);
-    }
+    } else setOpen(false);
   }, []);
 
   // close on click outside
@@ -73,7 +75,6 @@ function useMenu() {
     function onKey(e) {
       if (e.key === "Escape") {
         closeNow();
-        // return focus to trigger
         btnRef.current?.focus();
       }
     }
@@ -85,36 +86,74 @@ function useMenu() {
     () => () => timeoutRef.current && clearTimeout(timeoutRef.current),
     []
   );
-
   return { open, setOpen, openNow, closeNow, menuRef, btnRef };
 }
+
+// avatar helpers
+const normalizeUrl = (p) => {
+  if (!p) return null;
+  if (/^https?:\/\//i.test(p)) return p;
+  return getPhotoUrl(p);
+};
+const toInitials = (f, l) =>
+  [f?.[0], l?.[0]].filter(Boolean).join("").toUpperCase() || "";
 
 const Header = () => {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // responsive breakpoint (Tailwind lg = 1024px)
   const isLarge = useMediaQuery("(min-width: 1024px)");
 
-  // menus
   const userMenu = useMenu();
   const moreMenu = useMenu();
 
-  // reset dropdowns when auth changes
+  const [profile, setProfile] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+
   useEffect(() => {
     userMenu.closeNow();
     moreMenu.closeNow();
-  }, [currentUser]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [currentUser]); // eslint-disable-line
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        if (!currentUser?.id) {
+          if (alive) {
+            setProfile(null);
+            setAvatarUrl(null);
+          }
+          return;
+        }
+        const prof = await apiFetch(`/user/profile/${currentUser.id}`, {
+          method: "GET",
+        });
+        if (!alive) return;
+        setProfile(prof || null);
+        const photos = Array.isArray(prof?.photos) ? prof.photos : [];
+        const main = photos.find((p) => p?.isMain) ?? photos[0] ?? null;
+        setAvatarUrl(normalizeUrl(main?.url) || null);
+      } catch {
+        if (alive) {
+          setProfile(null);
+          setAvatarUrl(null);
+        }
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [currentUser?.id]);
 
   const handleLogout = async () => {
     userMenu.closeNow();
     moreMenu.closeNow();
-    await Promise.resolve(logout?.()); // in case logout is async
+    await Promise.resolve(logout?.());
     navigate("/");
   };
 
-  // links
   const guestLinks = [
     { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
     { to: "/about", label: "O nas", icon: <Info className="w-4 h-4" /> },
@@ -125,41 +164,43 @@ const Header = () => {
       icon: <Camera className="w-5 h-5" />,
     },
   ];
-
   const userLinks = [
     { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
     {
       to: "/dashboard",
       label: "Dashboard",
-      icon: <Info className="w-4 h-4" />,
+      icon: <LayoutDashboard className="w-4 h-4" />,
     },
   ];
-
   const navLinks = currentUser ? userLinks : guestLinks;
 
-  // CTA styling
   const activeBtn =
-    "inline-flex items-center justify-center rounded-lg bg-[#EA1A62] text-white transition-colors px-3 py-1 text-sm sm:px-4 sm:py-2 sm:text-base hover:bg-[#d1185a] focus:outline-none focus:ring-2 focus:ring-[#EA1A62]/40";
+    "inline-flex items-center justify-center rounded-lg bg-[#EA1A62] text-white transition-colors px-3 py-1 text-sm sm:px-4 sm:py-2 sm:text-base hover:bg-[#d1185a]";
   const inactiveBtn =
-    "inline-flex items-center justify-center rounded-lg text-gray-600 transition-colors px-2.5 py-1 text-sm sm:px-3 sm:py-2 sm:text-base hover:text-[#EA1A62] focus:outline-none focus:ring-2 focus:ring-[#EA1A62]/20";
+    "inline-flex items-center justify-center rounded-lg text-gray-600 transition-colors px-2.5 py-1 text-sm sm:px-3 sm:py-2 sm:text-base hover:text-[#EA1A62]";
 
   const onLoginPage = location.pathname === "/login";
   const loginBtnClass = onLoginPage ? activeBtn : inactiveBtn;
   const registerBtnClass = onLoginPage ? inactiveBtn : activeBtn;
 
+  const initials =
+    toInitials(profile?.firstName, profile?.lastName) ||
+    (currentUser?.email ? currentUser.email[0]?.toUpperCase() : "");
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 relative">
-          {/* Logo */}
+          {/* Logo (bez outline/ringu) */}
           <Link
             to="/"
-            className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#EA1A62]/30 rounded"
+            className="flex-shrink-0 rounded focus:outline-none focus-visible:outline-none"
           >
             <img
               className="w-[160px] sm:w-[200px] md:w-[220px] lg:w-[240px] xl:w-[280px] max-w-full"
               src={Logo}
               alt="Logo"
+              draggable={false}
             />
           </Link>
 
@@ -174,7 +215,7 @@ const Header = () => {
                     (isActive
                       ? "bg-[#EA1A62] text-white"
                       : "text-gray-600 hover:text-[#EA1A62]") +
-                    " px-3 h-10 flex items-center gap-x-2 rounded-md whitespace-nowrap transition-colors focus:outline-none focus:ring-2 focus:ring-[#EA1A62]/20"
+                    " px-3 h-10 flex items-center gap-x-2 rounded-md whitespace-nowrap transition-colors"
                   }
                 >
                   {link.icon}
@@ -202,32 +243,52 @@ const Header = () => {
               <div
                 className="relative"
                 onMouseEnter={() => {
-                  if (isLarge) {
-                    userMenu.openNow();
-                    moreMenu.closeNow();
-                  }
+                  userMenu.openNow(); // ← bez isLarge
+                  moreMenu.closeNow();
                 }}
                 onMouseLeave={() => {
-                  if (isLarge) userMenu.closeNow(150);
+                  userMenu.closeNow(150); // ← bez isLarge
                 }}
               >
                 <button
                   ref={userMenu.btnRef}
                   type="button"
-                  className="text-gray-600 hover:text-[#EA1A62] p-1 rounded focus:outline-none focus:ring-2 focus:ring-[#EA1A62]/30"
+                  className="p-0.5 rounded-full focus:outline-none focus-visible:outline-none"
                   aria-haspopup="menu"
                   aria-expanded={userMenu.open}
                   aria-controls="user-menu"
+                  onMouseEnter={() => {
+                    // ← bez isLarge
+                    userMenu.openNow();
+                    moreMenu.closeNow();
+                  }}
                   onClick={() => {
+                    // zostaw klik jako alternatywę
                     userMenu.setOpen((v) => {
                       const next = !v;
                       if (next) moreMenu.closeNow();
                       return next;
                     });
                   }}
+                  title="Otwórz menu użytkownika"
                 >
-                  <User className="w-6 h-6" aria-hidden="true" />
-                  <span className="sr-only">Otwórz menu użytkownika</span>
+                  {/* Avatar bez ringów */}
+                  <span className="inline-flex w-9 h-9 rounded-full overflow-hidden bg-gray-200 items-center justify-center">
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="Avatar użytkownika"
+                        className="w-full h-full object-cover"
+                        draggable={false}
+                      />
+                    ) : initials ? (
+                      <span className="text-sm font-medium text-gray-700 select-none">
+                        {initials}
+                      </span>
+                    ) : (
+                      <User className="w-5 h-5 text-gray-600" />
+                    )}
+                  </span>
                 </button>
 
                 {userMenu.open && (
@@ -236,12 +297,14 @@ const Header = () => {
                     ref={userMenu.menuRef}
                     role="menu"
                     aria-label="Menu użytkownika"
-                    className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[160px] py-1"
+                    className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[180px] py-1"
+                    onMouseEnter={() => userMenu.openNow()} // ← bez isLarge
+                    onMouseLeave={() => userMenu.closeNow(150)} // ← bez isLarge
                   >
                     <Link
                       to={`/profile/${currentUser.id}`}
                       role="menuitem"
-                      className="px-4 py-2 hover:bg-gray-100 text-gray-700 focus:bg-gray-100 focus:outline-none"
+                      className="px-4 py-2 hover:bg-gray-100 text-gray-700"
                       onClick={() => userMenu.closeNow()}
                     >
                       Profil
@@ -249,7 +312,7 @@ const Header = () => {
                     <button
                       role="menuitem"
                       onClick={handleLogout}
-                      className="px-4 py-2 hover:bg-gray-100 text-gray-700 text-left focus:bg-gray-100 focus:outline-none"
+                      className="px-4 py-2 hover:bg-gray-100 text-gray-700 text-left"
                     >
                       Wyloguj
                     </button>
@@ -259,13 +322,12 @@ const Header = () => {
             )}
           </div>
 
-          {/* MOBILE: centered “Więcej” */}
+          {/* MOBILE: centered “Więcej” (bez outline/ringu) */}
           {!isLarge && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div
                 className="relative pointer-events-auto"
                 onMouseEnter={() => {
-                  // hover only on larger touchpads; still safe on small screens
                   moreMenu.openNow();
                   userMenu.closeNow();
                 }}
@@ -274,7 +336,7 @@ const Header = () => {
                 <button
                   ref={moreMenu.btnRef}
                   type="button"
-                  className="flex items-center gap-x-1 px-3 h-10 rounded-md text-gray-600 hover:text-[#EA1A62] cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#EA1A62]/20"
+                  className="flex items-center gap-x-1 px-3 h-10 rounded-md text-gray-600 hover:text-[#EA1A62] cursor-pointer focus:outline-none focus-visible:outline-none"
                   aria-haspopup="menu"
                   aria-expanded={moreMenu.open}
                   aria-controls="more-menu"
@@ -306,7 +368,7 @@ const Header = () => {
                         onClick={() => moreMenu.closeNow()}
                         className={({ isActive }) =>
                           (isActive ? "bg-gray-100 " : "") +
-                          "px-4 py-2 hover:bg-gray-100 flex items-center gap-x-2 whitespace-nowrap text-gray-700 focus:bg-gray-100 focus:outline-none"
+                          "px-4 py-2 hover:bg-gray-100 flex items-center gap-x-2 whitespace-nowrap text-gray-700"
                         }
                       >
                         {link.icon}

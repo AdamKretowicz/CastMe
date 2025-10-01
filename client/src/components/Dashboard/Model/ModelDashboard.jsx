@@ -15,27 +15,60 @@ const sortByNewest = (arr) =>
     return bd - ad;
   });
 
+const normId = (v) => (v == null ? "" : String(v).toLowerCase());
+
+// „tolerancyjny” parser: wyciągnij castingId z odpowiedzi GET /casting/casting/participant/{userId}
+// Obsługujemy kilka możliwych kształtów: tablica obiektów { castingId } / { id } / { casting: { id } }
+// lub obiekt { castingIds: [...] }
+const extractCastingIdsForUser = (res) => {
+  if (!res) return [];
+  if (Array.isArray(res)) {
+    return res
+      .map((x) => x?.castingId ?? x?.id ?? x?.casting?.id)
+      .filter(Boolean)
+      .map(String);
+  }
+  if (Array.isArray(res?.items)) {
+    return res.items
+      .map((x) => x?.castingId ?? x?.id ?? x?.casting?.id)
+      .filter(Boolean)
+      .map(String);
+  }
+  if (Array.isArray(res?.castingIds)) {
+    return res.castingIds.filter(Boolean).map(String);
+  }
+  return [];
+};
+
 export default function ModelDashboard() {
   const { currentUser } = useAuth();
+
   const [castings, setCastings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
+
+  // „moje zgłoszenia” — surowe dane (dla ApplicationsList)
   const [userApplications, setUserApplications] = useState([]);
+
+  // Zestaw castingów, do których user dołączył (dla szybkiego hasApplied)
+  const [userCastingIds, setUserCastingIds] = useState(new Set());
+  const [loadingUserCastingIds, setLoadingUserCastingIds] = useState(false);
 
   // bannery
   const { banners: castingBanners } = useCastingBanners(castings);
 
+  // 1) Pobierz listę castingów
   useEffect(() => {
     const load = async () => {
       try {
         const data = await apiFetch("/casting/casting");
         setCastings(sortByNewest(Array.isArray(data) ? data : []));
       } catch (e) {
-        setError("Błąd pobierania castingów");
         console.error(e);
+        setError("Błąd pobierania castingów");
       } finally {
         setLoading(false);
       }
@@ -43,42 +76,93 @@ export default function ModelDashboard() {
     load();
   }, []);
 
+  // 2) Pobierz „moje zgłoszenia” po userId — KLUCZOWE
+  const refreshUserParticipations = async (userId) => {
+    if (!userId) return;
+    setLoadingUserCastingIds(true);
+    try {
+      const res = await apiFetch(`/casting/casting/participant/${userId}`, {
+        method: "GET",
+      });
+      // a) zasil listę ApplicationsList (jeśli chcesz ją pokazywać)
+      setUserApplications(
+        Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : []
+      );
+
+      // b) ustaw Set castingId dla hasApplied
+      const ids = extractCastingIdsForUser(res);
+      setUserCastingIds(new Set(ids.map(normId)));
+    } catch (e) {
+      // Jeśli 403/404 – zwykle znaczy brak dostępu/zgłoszeń; wtedy zostaw pusty set
+      console.warn("Nie udało się pobrać moich zgłoszeń:", e);
+      setUserApplications([]);
+      setUserCastingIds(new Set());
+    } finally {
+      setLoadingUserCastingIds(false);
+    }
+  };
+
   useEffect(() => {
-    if (!currentUser) return;
-    const load = async () => {
-      try {
-        const data = await apiFetch(
-          `/casting/casting/participants/${currentUser.id}`
-        );
-        setUserApplications(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error("Błąd pobierania zgłoszeń użytkownika:", e);
-      }
-    };
-    load();
-  }, [currentUser]);
+    if (currentUser?.id) {
+      refreshUserParticipations(currentUser.id);
+    }
+  }, [currentUser?.id]);
 
-  const hasApplied = (castingId) =>
-    userApplications.some(
-      (a) => a.id === castingId || a.castingId === castingId
-    );
+  const hasApplied = (castingId) => userCastingIds.has(normId(castingId));
 
+  // 3) POST – dołącz do castingu: optymistycznie + odśwież „moje zgłoszenia”
   const handleApply = async (castingId) => {
+    if (!currentUser?.id) {
+      alert("Musisz być zalogowany, aby się zgłosić.");
+      return;
+    }
+    if (hasApplied(castingId)) {
+      alert("Już dołączyłeś do tego castingu.");
+      return;
+    }
+
     try {
       await apiFetch(
-        `/casting/casting/${castingId}/participants/${currentUser.id}`,
+        `/casting/casting/${castingId}/participant/${currentUser.id}`,
         { method: "POST" }
       );
-      const data = await apiFetch(
-        `/casting/casting/participants/${currentUser.id}`
-      );
-      setUserApplications(Array.isArray(data) ? data : []);
+
+      // OPTYMISTYCZNIE: dopisz do setu, żeby UI od razu był poprawny
+      setUserCastingIds((prev) => {
+        const next = new Set(prev);
+        next.add(normId(castingId));
+        return next;
+      });
+
+      // A-SYNC: dociągnij najnowszy stan z backendu
+      refreshUserParticipations(currentUser.id);
+
       setSelectedCasting(null);
       setApplicationMessage("");
       alert("Zgłoszenie zostało wysłane!");
     } catch (err) {
-      alert("Błąd wysyłania zgłoszenia");
       console.error("Błąd wysyłania zgłoszenia:", err);
+
+      // Jeśli backend zwróci 409/500 dla duplikatu — zaznacz mimo wszystko
+      if (err?.status === 409 || err?.status === 500) {
+        setUserCastingIds((prev) => {
+          const next = new Set(prev);
+          next.add(normId(castingId));
+          return next;
+        });
+        setSelectedCasting(null);
+        setApplicationMessage("");
+        alert("Już jesteś uczestnikiem tego castingu.");
+        return;
+      }
+
+      const msg =
+        err?.status === 403
+          ? "Nie możesz dołączyć do tego castingu."
+          : err?.status === 404
+          ? "Casting nie istnieje."
+          : "Błąd wysyłania zgłoszenia.";
+      alert(msg);
     }
   };
 
@@ -86,7 +170,7 @@ export default function ModelDashboard() {
     () => (
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#2B2628] mb-2">
-          Witaj, {currentUser.firstName}!
+          Witaj, {currentUser?.firstName || "Modelu"}!
         </h1>
         <p className="text-gray-600">
           Zarządzaj swoimi zgłoszeniami i znajdź nowe okazje
@@ -102,6 +186,7 @@ export default function ModelDashboard() {
         Ładowanie castingów...
       </div>
     );
+
   if (error)
     return (
       <div className="min-h-screen flex items-center justify-center text-red-600">
@@ -133,15 +218,37 @@ export default function ModelDashboard() {
               </Card.Header>
               <Card.Content>
                 <div className="space-y-6">
-                  {castings.map((casting) => (
-                    <CastingCard
-                      key={casting.id}
-                      casting={casting}
-                      bannerUrl={castingBanners[casting.id]}
-                      hasApplied={hasApplied(casting.id)}
-                      onApply={() => setSelectedCasting(casting)}
-                    />
-                  ))}
+                  {castings.map((casting) => {
+                    const isClosed =
+                      casting.status && casting.status !== "Active";
+                    const isFull = casting.roles?.some(
+                      (r) => r.capacity && r.acceptedCount >= r.capacity
+                    );
+                    const afterDeadline =
+                      casting.eventDate &&
+                      new Date(casting.eventDate) < new Date();
+
+                    const disabledComputed =
+                      isClosed ||
+                      isFull ||
+                      afterDeadline ||
+                      hasApplied(casting.id);
+
+                    return (
+                      <CastingCard
+                        key={casting.id}
+                        casting={casting}
+                        bannerUrl={castingBanners[casting.id]}
+                        hasApplied={hasApplied(casting.id)}
+                        disabled={disabledComputed}
+                        onApply={() => {
+                          // nie otwieraj modala, jeśli jeszcze ładujemy lub jest disabled
+                          if (loadingUserCastingIds || disabledComputed) return;
+                          setSelectedCasting(casting);
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </Card.Content>
             </Card>
@@ -149,7 +256,7 @@ export default function ModelDashboard() {
         </div>
       </div>
 
-      {/* MODAL – rozmyte tło, focus-trap, portal */}
+      {/* MODAL */}
       <Modal
         isOpen={!!selectedCasting}
         backdropImage={

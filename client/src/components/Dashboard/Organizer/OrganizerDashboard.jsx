@@ -1,3 +1,4 @@
+// src/components/Casting/Organizer/OrganizerDashboard.jsx
 import { useMemo, useState } from "react";
 import { useCasting } from "../../../context/CastingContext";
 import Button from "../../UI/Button";
@@ -7,6 +8,7 @@ import { useCastingBanners } from "../../../hooks/useCastingBanners";
 import CreateCastingForm from "./CreateCastingForm";
 import OrganizerCastingList from "./OrganizerCastingList";
 import ApplicationsPanel from "./ApplicationsPanel";
+import ParticipantsModal from "./ParticipantsModal"; // <-- UŻYWAMY DEDYKOWANEGO MODALA
 
 export default function OrganizerDashboard() {
   const { castings, createCasting, getCastingApplications, isLoading } =
@@ -15,7 +17,10 @@ export default function OrganizerDashboard() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCasting, setSelectedCasting] = useState(null);
 
-  // nagłówek jak w ModelDashboard — memoizowany JSX, bez osobnego pliku
+  // modal uczestników (dla organizatora)
+  const [participantsModalOpen, setParticipantsModalOpen] = useState(false);
+
+  // nagłówek
   const header = useMemo(
     () => (
       <div className="mb-0">
@@ -41,9 +46,15 @@ export default function OrganizerDashboard() {
     return arr;
   }, [castings]);
 
-  // bannery (wspólny hook jak w ModelDashboard)
+  // bannery
   const { banners: castingBanners, fetchBannerFor } =
     useCastingBanners(organizerCastings);
+
+  // otwarcie modala – klik na kartę castingu
+  const openParticipantsModal = (casting) => {
+    setSelectedCasting(casting);
+    setParticipantsModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -71,15 +82,31 @@ export default function OrganizerDashboard() {
             castingBanners={castingBanners}
             isLoading={isLoading}
             selectedCastingId={selectedCasting?.id}
-            onSelectCasting={setSelectedCasting}
+            onSelectCasting={(c) => {
+              setSelectedCasting(c);
+              openParticipantsModal(c); // ← otwórz modal uczestników po kliknięciu karty
+            }}
           />
 
+          {/* Panel zgłoszeń zostaje po staremu (gdy dodacie statusy, wpięjemy akcje akceptacji/odrzucenia) */}
           <ApplicationsPanel
             selectedCasting={selectedCasting}
             getCastingApplications={getCastingApplications}
           />
         </div>
       </div>
+
+      {/* Modal uczestników (avatar, imię+nazwisko, @userName, link do profilu po ID) */}
+      <ParticipantsModal
+        casting={selectedCasting}
+        isOpen={participantsModalOpen}
+        onClose={() => setParticipantsModalOpen(false)}
+        onChanged={({ type, userId }) => {
+          // opcjonalnie: tu możesz odświeżyć szczegóły castingu / liczniki ról po "removed"
+          // np. re-fetch castings w useCasting() lub lokalna korekta acceptedCount
+          // console.log(type, userId);
+        }}
+      />
     </div>
   );
 }
