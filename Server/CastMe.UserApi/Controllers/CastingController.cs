@@ -3,6 +3,8 @@ using Application.Dtos.Photo;
 using Application.Interfaces;
 using Application.Mapper;
 using CastMe.Domain.Entities;
+using CastMe.User.CrossCutting.DTOs;
+using CastMe.UserApi.Mappers;
 using CastMe.UserApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -84,7 +86,8 @@ namespace WebApi.Controllers
             if (!Guid.TryParse(userIdClaim, out Guid organiserId))
             {
                 throw new Exception("Invalid user ID in token.");
-            };
+            }
+            ;
 
             var casting = dto.ToEntity(organiserId);
             await _castingService.Add(casting);
@@ -129,9 +132,9 @@ namespace WebApi.Controllers
         {
             try
             {
-                var casting = await _castingService.GetParticipantsByCastingId(id);
+                var assigments = await _castingService.GetParticipantsByCastingId(id);
 
-                return Ok(casting.ToParticipantReadDto());
+                return Ok(assigments.ToParticipantReadDto());
             }
             catch (KeyNotFoundException)
             {
@@ -209,7 +212,7 @@ namespace WebApi.Controllers
             try
             {
                 CastingStatus castingStatus;
-                if (!Enum.TryParse<CastingStatus>(status, true, out castingStatus)) 
+                if (!Enum.TryParse<CastingStatus>(status, true, out castingStatus))
                 {
                     return BadRequest(new { message = "Invalid status value. Allowed values are: Active, Closed, Cancelled, Finished." });
                 }
@@ -295,5 +298,59 @@ namespace WebApi.Controllers
         }
 
 
+        [HttpGet(Endpoints.CastingEndpoints.GetPendingUsersByCastingId)]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> GetPendingUsersByCastingId([FromRoute] Guid castingId)
+        {
+            try
+            {
+                var assignments = await _castingService.GetCastingPendingUsersByCastingId(castingId);
+                if (assignments == null || !assignments.Any())
+                {
+                    return NotFound(new { message = "No pending users found for this casting." });
+                }
+
+                return Ok(assignments.Select(a => new
+                {
+                    AssignmentId = a.Id,
+                    User = a.User.ToReadDto()
+                }));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to get pending users. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+
+        [HttpPost(Endpoints.CastingEndpoints.ChangeUserAssignmentStatus)]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> ChangeUserAssignmentStatus([FromRoute] Guid assigmentId, [FromQuery] string status)
+        {
+            try
+            {
+                CastingUserStatus assignmentStatus;
+                if (!Enum.TryParse<CastingUserStatus>(status, true, out assignmentStatus))
+                {
+                    return BadRequest(new { message = "Invalid status value. Allowed values are: Active, Rejected." });
+                }
+                await _castingService.ChangeUserCastingStatus(assigmentId, assignmentStatus);
+                return NoContent();
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to change user assignment status. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+
+
+
+        }
     }
 }

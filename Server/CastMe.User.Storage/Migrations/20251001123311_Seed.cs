@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using CastMe.Domain.Entities;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -47,6 +48,9 @@ namespace Infrastructure.Migrations
             var tag7Id = Guid.NewGuid();
             var tag8Id = Guid.NewGuid();
             var tag9Id = Guid.NewGuid();
+
+
+            var acceptedStatus = 2;
 
             // Seed UserRoles
             migrationBuilder.InsertData(
@@ -369,7 +373,7 @@ namespace Infrastructure.Migrations
             migrationBuilder.InsertData(
                 schema: "Casting",
                 table: "CastingAssignments",
-                columns: new[] { "Id", "CastingId", "RoleId", "UserId" },
+                columns: new[] { "Id", "CastingId", "RoleId", "UserId", "UserAcceptanceStatus" },
                 values: new object[,]
                 {
         // Summer Fashion Campaign 2025 assignments
@@ -377,19 +381,22 @@ namespace Infrastructure.Migrations
             Guid.NewGuid(), // assignment1Id
             casting1Id,
             modelRoleId,    // UserRole: Model
-            user1Id         // Sophia
+            user1Id,         // Sophia
+            acceptedStatus
         },
         {
             Guid.NewGuid(), // assignment2Id
             casting1Id,
             photographerRoleId, // UserRole: Photographer
-            user2Id             // Alex
+            user2Id,
+            acceptedStatus// Alex
         },
         {
             Guid.NewGuid(), // assignment3Id
             casting1Id,
             designerRoleId, // UserRole: Designer or volunteerRoleId if needed
-            user3Id
+            user3Id,
+            acceptedStatus// Alex
         },
 
         // Independent Film Production assignments
@@ -397,13 +404,15 @@ namespace Infrastructure.Migrations
             Guid.NewGuid(), // assignment4Id
             casting2Id,
             modelRoleId,    // UserRole: Model
-            user1Id
+            user1Id,
+            acceptedStatus// Alex
         },
         {
             Guid.NewGuid(), // assignment5Id
             casting2Id,
             designerRoleId, // UserRole: Designer
-            user3Id
+            user3Id,
+            acceptedStatus// Alex
         },
 
         // Commercial Photography Workshop assignments
@@ -411,13 +420,15 @@ namespace Infrastructure.Migrations
             Guid.NewGuid(), // assignment6Id
             casting3Id,
             photographerRoleId, // UserRole: Photographer
-            user2Id
+            user2Id,
+            acceptedStatus// Alex
         },
         {
             Guid.NewGuid(), // assignment7Id
             casting3Id,
             modelRoleId,    // UserRole: Model
-            user1Id
+            user1Id,
+            acceptedStatus// Alex
         }
                 });
 

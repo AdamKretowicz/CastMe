@@ -26,6 +26,9 @@ namespace Domain.Entities
         [Required]
         public Guid UserId { get; set; }
         public User User { get; set; } = default!;
+
+        [Required]
+        public CastingUserStatus UserAcceptanceStatus { get; set; } = CastingUserStatus.Pending;
     }
 
 }
