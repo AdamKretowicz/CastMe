@@ -69,11 +69,13 @@ namespace WebApi.Services
             .ToListAsync();
 
 
-        public async Task<Casting> GetParticipantsByCastingId(Guid castingId) =>
-            await _context.Castings
-                .Include(c => c.Assignments)
-                .ThenInclude(a => a.User)
-                .FirstOrDefaultAsync(c => c.Id == castingId) 
+        public async Task<List<CastingAssignment>> GetParticipantsByCastingId(Guid castingId) =>
+
+            await _context.Assignments
+                .Include(a => a.User)
+                .Include(a => a.Role)
+                .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == CastingUserStatus.Active)
+                .ToListAsync()
                 ?? throw new KeyNotFoundException("Casting not found");
 
         public async Task AddParticipant(Guid castingId, Guid userId)
@@ -98,7 +100,8 @@ namespace WebApi.Services
                 Id = Guid.NewGuid(),
                 CastingId = castingId,
                 UserId = userId,
-                RoleId = user.RoleId
+                RoleId = user.RoleId,
+                UserAcceptanceStatus = CastingUserStatus.Pending
             };
 
             _context.Assignments.Add(assignment);
@@ -131,6 +134,34 @@ namespace WebApi.Services
                 .ExecuteUpdateAsync(c => c.SetProperty(c => c.Status, c => status));
             return await GetById(castingId) ?? throw new KeyNotFoundException("Casting not found");
         }
+
+        public async Task<IEnumerable<CastingAssignment>> GetCastingPendingUsersByCastingId(Guid castingId)
+        {
+
+            var assigments = await _context.Assignments
+                .Include(u => u.User)
+                .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == CastingUserStatus.Pending)
+                .ToListAsync()
+                ?? throw new KeyNotFoundException("Casting not found");
+
+            return assigments;
+
+
+        }
+
+
+        public async Task<CastingAssignment> ChangeUserCastingStatus(Guid assignmentId, CastingUserStatus status)
+            {
+            var assignment = await _context.Assignments
+                .Where(a => a.Id == assignmentId)
+                .ExecuteUpdateAsync(a => a.SetProperty(a => a.UserAcceptanceStatus, a => status));
+            return await _context.Assignments
+                .Include(a => a.User)
+                .Include(a => a.Casting)
+                .FirstOrDefaultAsync(a => a.Id == assignmentId)
+                ?? throw new KeyNotFoundException("Assignment not found");
+        }
+
 
 
     }

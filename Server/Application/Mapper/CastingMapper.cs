@@ -35,7 +35,7 @@ namespace Application.Mapper
                 AcceptedCount = r.AcceptedCount
             }).ToList(),
             Tags = casting.Tags.Select(t => t.Value).ToList(),
-           
+
         };
 
 
@@ -100,11 +100,27 @@ namespace Application.Mapper
             }
         }
         //ENTITY -> READ DTO (PARTICIPANT VIEW)
-        public static CastingDto.ReadParticipants ToParticipantReadDto(this Casting casting) => new CastingDto.ReadParticipants
-        {
-            CastingId = casting.Id,
-            Participants = casting.Assignments.ToDictionary(a => a.UserId.ToString(), a => a.Role.Name)
-        };
+        public static CastingDto.ReadParticipants ToParticipantReadDto(this List<CastingAssignment> assignments)
+            {
+                if (assignments == null || !assignments.Any())
+                {
+                    return new CastingDto.ReadParticipants
+                    {
+                        CastingId = Guid.Empty,
+                        Participants = new Dictionary<string, string>()
+                    };
+                }
+
+                return new CastingDto.ReadParticipants
+                {
+
+                    CastingId = assignments.FirstOrDefault()!.CastingId,
+                    Participants = assignments.ToDictionary(a => a.UserId.ToString(), a => a.Role.Name.ToString())
+                };
+
+        }
+
+
 
         // ENTITY -> READ DTO CastingBanner
 
