@@ -185,6 +185,8 @@ export default function StatusUpdatePage() {
   const handleSubmitAllPhotoUpdates = () => {
   if (batchedPhotoUpdates.length === 0) return;
 
+  activeTab==='users'?loadPendingUsers:loadPendingPhotos;
+
   setConfirmModal({
     open: true,
     title: "Zatwierdź wszystkie zmiany zdjęć?",
@@ -210,6 +212,13 @@ export default function StatusUpdatePage() {
         );
 
         setBatchedPhotoUpdates([]);
+
+        if (activeTab === 'users') {
+          await loadPendingUsers();
+        } else {
+          await loadPendingPhotos();
+        }
+
       } catch (err) {
         console.error(err);
         setError("Błąd przy wysyłaniu zmian zdjęć: " + err.message);
