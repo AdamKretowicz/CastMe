@@ -12,5 +12,6 @@ namespace WebApi.Services.Photo
         Task SetMainAsync(Guid userId, Guid photoId, CancellationToken ct = default);
         Task ReorderAsync(Guid userId, List<Guid> orderedPhotoIds, CancellationToken ct = default);
         Task UpdatePhotoStatus(List<PhotoDtoUpdate> photos, CancellationToken ct = default);
+        Task<IReadOnlyList<PhotoDto>> GetAllPendingPhotos(CancellationToken ct = default);
     }
 }

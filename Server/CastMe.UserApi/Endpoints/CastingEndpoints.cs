@@ -18,5 +18,7 @@
         public const string GetCastingBanner = basePath + "/{castingId:guid}/banner";
         public const string UploadCastingBanner = basePath + "/{castingId:guid}/banner";
         public const string DeleteCastingBanner = basePath + "/{castingId:guid}/banner";
+        public const string GetPendingUsersByCastingId = basePath + "/{castingId:guid}/pending-users";
+        public const string ChangeUserAssignmentStatus = basePath + "/{assigmentId:guid}/status";
     }
 }

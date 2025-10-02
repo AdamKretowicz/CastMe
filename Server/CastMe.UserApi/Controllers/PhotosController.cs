@@ -13,7 +13,7 @@ using WebApi.Services.Photo;
 namespace CastMe.Api.Controllers
 {
     [ApiController]
-    [Route("api/users/{userId:guid}/photos")]
+    [Route("api/users")]
     public class PhotosController : ControllerBase
     {
         private readonly IPhotoService _service;
@@ -21,18 +21,18 @@ namespace CastMe.Api.Controllers
         public PhotosController(IPhotoService service) => _service = service;
 
         /// <summary>Lista zdjęć użytkownika (publiczna, zwraca URL-e do statycznych plików).</summary>
-        [HttpGet]
+        [HttpGet("{userId:guid}/photos")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(IReadOnlyList<PhotoDto>), StatusCodes.Status200OK)]
-        [RoleAuthorize("Admin", "Model", "Photographer","Designer", "Guest")]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Guest")]
         public async Task<IActionResult> GetUserPhotos([FromRoute] Guid userId, CancellationToken ct)
         {
             var items = await _service.GetUserPhotosAsync(userId, ct);
             return Ok(items);
         }
 
-        /// <summary>Lista zdjęć użytkownika, zwraca również zdjęcia zaakceptowane (publiczna, zwraca URL-e do statycznych plików).</summary>
-        [HttpGet("pending")]
+        /// <summary>Lista zdjęć użytkownika, zwraca zdjęcia do zaakaceptowania (publiczna, zwraca URL-e do statycznych plików).</summary>
+        [HttpGet("{userId:guid}/photos/pending")]
         [AllowAnonymous]
         [ProducesResponseType(typeof(IReadOnlyList<PhotoDto>), StatusCodes.Status200OK)]
         [RoleAuthorize("Admin")]
@@ -43,7 +43,7 @@ namespace CastMe.Api.Controllers
         }
 
         /// <summary>Upload jednego zdjęcia (multipart/form-data, pole "file").</summary>
-        [HttpPost]
+        [HttpPost("{userId:guid}/photos")]
         [Authorize]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(50_000_000)]
@@ -65,7 +65,7 @@ namespace CastMe.Api.Controllers
         }
 
         /// <summary>Usuń zdjęcie z galerii użytkownika.</summary>
-        [HttpDelete("{photoId:guid}")]
+        [HttpDelete("{userId:guid}/photos/{photoId:guid}")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -78,7 +78,7 @@ namespace CastMe.Api.Controllers
         }
 
         /// <summary>Ustaw wskazane zdjęcie jako główne (IsMain=true).</summary>
-        [HttpPut("{photoId:guid}/main")]
+        [HttpPut("{userId:guid}/photos/{photoId:guid}/main")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -91,7 +91,7 @@ namespace CastMe.Api.Controllers
         }
 
         /// <summary>Zmień kolejność zdjęć (przekaż listę ID w docelowej kolejności).</summary>
-        [HttpPatch("reorder")]
+        [HttpPatch("{userId:guid}/photos/reorder")]
         [Authorize]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -109,7 +109,7 @@ namespace CastMe.Api.Controllers
             return NoContent();
         }
 
-        [HttpPut]
+        [HttpPut("photos/updateStatus")]
         [ProducesResponseTypeAttribute(StatusCodes.Status204NoContent)]
         [RoleAuthorize("Admin")]
         public async Task<IActionResult> UpdatePhotoStatus([FromBody] List<PhotoDtoUpdate> photos, CancellationToken ct)
@@ -118,6 +118,15 @@ namespace CastMe.Api.Controllers
                 return BadRequest("No photos provided.");
             await _service.UpdatePhotoStatus(photos, ct);
             return NoContent();
+        }
+
+        [HttpGet("photos/allPending")]
+        [ProducesResponseTypeAttribute(StatusCodes.Status200OK, Type = typeof(IReadOnlyList<PhotoDto>))]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> GetAllPendingPhotos(CancellationToken ct)
+        {
+            var items = await _service.GetAllPendingPhotos(ct);
+            return Ok(items);
         }
 
     }

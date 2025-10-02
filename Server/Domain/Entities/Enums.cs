@@ -46,6 +46,13 @@ namespace CastMe.Domain.Entities
         Pending = 2,
         Rejected = 3
     }
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum CastingUserStatus
+    {
+        Active = 1,
+        Pending = 2,
+        Rejected = 3
+    }
     
 
 }
