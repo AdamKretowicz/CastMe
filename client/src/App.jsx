@@ -15,8 +15,10 @@ import ProfilePage from "./Pages/ProfilePage";
 import AboutPage from "./Pages/About";
 import EditProfilePage from "./Pages/EditProfilePage";
 import FavoritesPage from "./Pages/FavoritesPage";
-import ProfileFilterPage from "./Pages/ProfileFilterPage"; // ✅ corrected import
+import ProfileFilterPage from "./Pages/ProfileFilterPage";
 import StatusUpdatePage from "./Pages/StatusUpdatePage";
+import ContactPage from "./Pages/ContactPage.jsx";
+
 
 function App() {
   return (
@@ -38,6 +40,7 @@ function App() {
                   <Route path="/favorites" element={<FavoritesPage />} />
                   <Route path="/filterUsers" element={<ProfileFilterPage />} />
                   <Route path="/pending-accounts" element={<StatusUpdatePage />} />
+                  <Route path="/contact-us" element={<ContactPage />} />
                 </Routes>
               </main>
               <Footer />

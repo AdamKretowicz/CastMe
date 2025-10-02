@@ -4,13 +4,21 @@ const API_BASE_URL = API_URL; // Adjust if different
 
 //Retrive photo url
 
-export const getPhotoUrl = (relativeUrl) => {
-  if (!relativeUrl) return null;
+export const getPhotoUrl = (url) => {
+  if (!url) return null;
 
-  // Use the same origin as the API base (process.env can hold the backend URL)
-  // For Vite, you can set VITE_API_URL in .env
-  const backendOrigin = import.meta.env.VITE_API_URL || "";
-  return `${backendOrigin}${relativeUrl}`;
+  // If it's already a full URL (starts with http or https), return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+
+  // Otherwise, treat it as a relative URL and prepend backend origin
+  const backendOrigin = import.meta.env.VITE_API_URL || '';
+  
+  // Ensure there's no double slash
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+
+  return `${backendOrigin}${cleanUrl}`;
 };
 
 // Get token from localStorage
@@ -518,3 +526,25 @@ export const updatePhotoStatus = async (photosToUpdate, token) => {
 
   return true;
 };
+
+export async function sendEmail(data) {
+  try {
+    const response = await fetch("/email/email/form", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Nie udało się wysłać wiadomości");
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+

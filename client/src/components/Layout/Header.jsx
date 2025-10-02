@@ -32,20 +32,24 @@ const Header = () => {
         { to: "/dashboard", label: "Dashboard" , icon: <LayoutDashboard  className="w-5 h-5" />},
         { to: "/filterUsers", label: "Użytkownicy" , icon: <Users  className="w-5 h-5" />},
         { to: "/castings", label: "Castingi", icon: <Camera className="w-5 h-5" /> },
-        { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
+        { to: "/contact-us", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
         ...(currentUser.role === "Admin"
           ? [
               { to: "/favorites", label: "Ulubione", icon: <Heart className="w-4 h-4" /> },
-              { to: "/pending-accounts", label: "Konta oczekujące", icon: <User className="w-4 h-4" /> }
+              { to: "/pending-accounts", label: "Weryfikacja", icon: <User className="w-4 h-4" /> }
           ]
           : []),
       ]
     : [
         { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
         { to: "/about", label: "O nas", icon: <Info className="w-4 h-4" /> },
-        { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
-        // { to: "/login", label: "Logowanie" },
-        // { to: "/register", label: "Rejestracja" },
+        { to: "/contact-us", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
+        ...(isMobile === true
+          ? [
+              { to: "/login", label: "Logowanie" },
+              { to: "/register", label: "Rejestracja" },
+          ]
+          : []),      
       ];
 
   return (

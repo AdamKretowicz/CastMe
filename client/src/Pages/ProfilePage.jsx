@@ -213,56 +213,68 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="bg-white text-[#2b2628] min-h-screen p-4 md:p-10">
-      <div className="max-w-6xl mx-auto">
-        {/* Info section */}
-        <Card className="p-6 mb-8 text-center relative">
-          <div className="relative inline-block w-48 h-48 rounded-full overflow-hidden border-4 border-[#2b2628] mx-auto">
-            {mainPhoto && (
-              <img
-                src={getPhotoUrl(mainPhoto.url)}
-                alt="Main profile"
-                className="w-full h-full object-cover cursor-pointer"
-                onClick={() => openModal(0)}
-              />
-            )}
-            <Camera size={24} className="absolute bottom-2 right-2 text-white bg-[#EA1A62] p-1 rounded-full"/>
-          </div>
-          <h1 className="text-4xl font-bold mt-4">{selectedUser.firstName} {selectedUser.lastName}</h1>
+    <div className="bg-white text-[#2b2628] min-h-screen p-4 sm:p-6 md:p-10">
+  <div className="max-w-6xl mx-auto">
+    {/* Info section */}
+    <Card className="p-6 mb-8 text-center relative">
+      {/* Profile image */}
+      <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-[#2b2628] mx-auto">
+        {mainPhoto && (
+          <img
+            src={getPhotoUrl(mainPhoto.url)}
+            alt="Main profile"
+            className="w-full h-full object-cover cursor-pointer"
+            onClick={() => openModal(0)}
+          />
+        )}
+        <Camera 
+          size={20} 
+          className="absolute bottom-2 right-2 text-white bg-[#EA1A62] p-1 rounded-full sm:p-2 sm:text-xl"
+        />
+      </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6">
-            {dynamicInfoFields.map(({ label, key, value }) => (
-              <p key={key} className="flex items-center">
-                {fieldIcons[key] || null} 
-                <span className="mr-1 font-semibold">{label}:</span>
-                <span className="font-bold">{value}</span>
-              </p>
-            ))}
-          </div>
+      {/* Name */}
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mt-4">
+        {selectedUser.firstName} {selectedUser.lastName}
+      </h1>
 
-          <p className="mt-4 text-lg leading-relaxed">{selectedUser.description}</p>
-          
-          {/* Favorite button for admin users */}
-          {isAdmin && !isSelfProfile && (
-            <div className="mt-4">
-              <Button
-                onClick={toggleFavorite}
-                disabled={favoriteLoading}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
-                  isFavorite ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#EA1A62] text-black hover:bg-gray-300'
-                } disabled:opacity-50`}
-              >
-                <Heart size={18} fill={isFavorite ? "white" : "none"} />
-                {favoriteLoading 
-                  ? 'Ładowanie...' 
-                  : isFavorite 
-                    ? 'Usuń z ulubionych' 
-                    : 'Dodaj do ulubionych'
-                }
-              </Button>
-            </div>
-          )}
-        </Card>
+      {/* Dynamic info */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-6 text-center sm:text-center justify-end">
+        {dynamicInfoFields.map(({ label, key, value }) => (
+          <p key={key} className="flex items-left justify-start sm:justify-left gap-1">
+            {fieldIcons[key] || null} 
+            <span className="font-semibold">{label}:</span>
+            <span className="font-bold">{value}</span>
+          </p>
+        ))}
+      </div>
+
+      {/* Description */}
+      <p className="mt-4 text-base sm:text-lg leading-relaxed text-left sm:text-center">
+        {selectedUser.description}
+      </p>
+
+      {/* Favorite button for admin users */}
+      {isAdmin && !isSelfProfile && (
+        <div className="mt-4 flex justify-center">
+          <Button
+            onClick={toggleFavorite}
+            disabled={favoriteLoading}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors ${
+              isFavorite ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-[#EA1A62] text-black hover:bg-gray-300'
+            } disabled:opacity-50`}
+          >
+            <Heart size={18} fill={isFavorite ? "white" : "none"} />
+            {favoriteLoading 
+              ? 'Ładowanie...' 
+              : isFavorite 
+                ? 'Usuń z ulubionych' 
+                : 'Dodaj do ulubionych'
+            }
+          </Button>
+        </div>
+      )}
+    </Card>
 
         {/* Gallery */}
         <Card className="p-6 mb-8">
