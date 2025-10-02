@@ -1,5 +1,6 @@
 ﻿using Application.Auth;
 using Application.Interfaces;
+using Azure.Storage.Blobs;
 using CastMe.Api.Features.Photos;
 using CastMe.UserApi.Services;
 using Infrastructure.Auth;
@@ -9,6 +10,7 @@ using Infrastructure.Security;
 using Infrastructure.Settings;
 using Infrastructure.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -24,6 +26,11 @@ using WebApi.Services.Photo;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddNewtonsoftJson();
+
+//Blob connection string
+var blobConnectionString = builder.Configuration["BlobStorage"];
+var blobContainerName = builder.Configuration["BlobContainer"];
+
 
 // Swagger z Bearer do logowania na testy
 builder.Services.AddEndpointsApiExplorer();
@@ -102,6 +109,16 @@ if (string.IsNullOrWhiteSpace(key))
     throw new InvalidOperationException("Missing JWT key. Set 'Jwt:Key' in appsettings/Secrets/ENV.");
 }
 
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+
+
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -122,6 +139,8 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+//Blob Service Client
+builder.Services.AddSingleton(x => new BlobContainerClient(blobConnectionString, blobContainerName));
 
 // Utworzone serwisy 
 builder.Services.AddScoped<UserService>();
@@ -142,6 +161,7 @@ builder.Services.AddScoped<ICastingBannerService, CastingBannerService>();
 
 
 
+
 // Rate limiting per IP for Email Form
 builder.Services.AddRateLimiter(options =>
 {
@@ -154,9 +174,18 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+//var port = Environment.GetEnvironmentVariable("PORT");
+//if (string.IsNullOrEmpty(port))
+//    {
+//        port = "8080"; // fallback for local development
+//    }
+//builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 
 app.UseStaticFiles();
 
@@ -164,7 +193,7 @@ app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CastMe WebApi v1"));
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 //Automatyczne logowanie admina w DEV (do testów bez tokena)
 if (app.Environment.IsDevelopment())
@@ -194,6 +223,9 @@ if (app.Environment.IsDevelopment())
         await next.Invoke();
     });
 }
+app.UseStaticFiles();
+app.UseRouting();
+
 app.UseCors(builder => builder
     .WithOrigins("http://localhost:5173")
     .AllowAnyMethod()
@@ -207,5 +239,7 @@ app.UseAuthorization();
 app.UseMiddleware<RoleAuthorizationMiddleware>();
 
 app.MapControllers();
+
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow }));
 
 app.Run();

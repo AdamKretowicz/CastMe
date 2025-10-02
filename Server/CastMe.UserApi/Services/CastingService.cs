@@ -140,6 +140,8 @@ namespace WebApi.Services
 
             var assigments = await _context.Assignments
                 .Include(u => u.User)
+                .ThenInclude(u => u.Photos)
+                .Include(r => r.Role)
                 .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == CastingUserStatus.Pending)
                 .ToListAsync()
                 ?? throw new KeyNotFoundException("Casting not found");
