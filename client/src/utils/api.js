@@ -511,7 +511,7 @@ export const updatePhotoStatus = async (photosToUpdate, token) => {
     photoStatus: photo.photoStatus // or photoStatus directly
   }));
 
-  const response = await fetch('https://localhost:7080/api/users/photos/updateStatus', {
+  const response = await fetch(`${API_BASE_URL}/api/users/photos/updateStatus`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json-patch+json',
