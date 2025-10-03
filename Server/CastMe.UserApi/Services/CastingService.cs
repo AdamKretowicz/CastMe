@@ -151,6 +151,22 @@ namespace WebApi.Services
 
         }
 
+        public async Task<IEnumerable<CastingAssignment>> GetCastingAllUsersByCastingId(Guid castingId)
+        {
+
+            var assigments = await _context.Assignments
+                .Include(u => u.User)
+                .ThenInclude(u => u.Photos)
+                .Include(r => r.Role)
+                .Where(a => a.CastingId == castingId)
+                .ToListAsync()
+                ?? throw new KeyNotFoundException("Casting not found");
+
+            return assigments;
+
+
+        }
+
 
         public async Task<CastingAssignment> ChangeUserCastingStatus(Guid assignmentId, CastingUserStatus status)
             {

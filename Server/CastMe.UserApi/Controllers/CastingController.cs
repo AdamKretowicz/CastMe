@@ -326,6 +326,35 @@ namespace WebApi.Controllers
         }
 
 
+        [HttpGet(Endpoints.CastingEndpoints.GetAllUsersByCastingId)]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> GetAllUsersByCastingId([FromRoute] Guid castingId)
+        {
+            try
+            {
+                var assignments = await _castingService.GetCastingAllUsersByCastingId(castingId);
+                if (assignments == null || !assignments.Any())
+                {
+                    return NotFound(new { message = "No pending users found for this casting." });
+                }
+
+                return Ok(assignments.Select(a => new
+                {
+                    AssignmentId = a.Id,
+                    AssigmentStatus = a.UserAcceptanceStatus.ToString(),
+                    User = a.User.ToReadDto()
+                }));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to get pending users. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+        }
+
+
         [HttpPost(Endpoints.CastingEndpoints.ChangeUserAssignmentStatus)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
