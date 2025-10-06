@@ -18,6 +18,8 @@ namespace WebApi.Services
             await _context.Castings
             .Include(c=> c.Roles)
             .Include(c => c.Tags)
+            .Include(c => c.Assignments)
+            .ThenInclude(a => a.Role)
             .AsNoTracking()
             .ToListAsync();
 
