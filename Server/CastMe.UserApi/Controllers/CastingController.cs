@@ -1,4 +1,4 @@
-﻿using Application.Dtos;
+﻿﻿﻿using Application.Dtos;
 using Application.Dtos.Photo;
 using Application.Interfaces;
 using Application.Mapper;
@@ -26,7 +26,11 @@ namespace WebApi.Controllers
         private readonly ILogger<CastingController> _logger;
         private readonly ICastingBannerService _castingBannerService;
 
-        public CastingController(CastingService castingService, UserService userService, ILogger<CastingController> logger, ICastingBannerService castingBannerService)
+        public CastingController(
+            CastingService castingService,
+            UserService userService,
+            ILogger<CastingController> logger,
+            ICastingBannerService castingBannerService)
         {
             _castingService = castingService;
             _userService = userService;
@@ -77,17 +81,10 @@ namespace WebApi.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             string? userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value;
-
             if (string.IsNullOrEmpty(userIdClaim))
-            {
                 throw new Exception("User ID not found in token.");
-            }
-
             if (!Guid.TryParse(userIdClaim, out Guid organiserId))
-            {
                 throw new Exception("Invalid user ID in token.");
-            }
-            ;
 
             var casting = dto.ToEntity(organiserId);
             await _castingService.Add(casting);
@@ -111,6 +108,7 @@ namespace WebApi.Controllers
             await _castingService.Update(dto, id);
             return Ok(existingCasting.ToReadDto());
         }
+
         ///<summary>Delete casting by Id.</summary>
         [HttpDelete(Endpoints.CastingEndpoints.Delete)]
         [ProducesResponseType(204)]
@@ -123,6 +121,7 @@ namespace WebApi.Controllers
             await _castingService.Delete(id);
             return NoContent();
         }
+
         ///<summary>Get participants by casting Id.</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetParticipantsByCastingId)]
         [ProducesResponseType(typeof(CastingDto.ReadParticipants), 200)]
@@ -133,30 +132,33 @@ namespace WebApi.Controllers
             try
             {
                 var assigments = await _castingService.GetParticipantsByCastingId(id);
-
                 return Ok(assigments.ToParticipantReadDto());
             }
             catch (KeyNotFoundException)
             {
                 return NotFound();
             }
-
         }
 
         ///<summary> Add participant to casting by casting Id. </summary>
         [HttpPost(Endpoints.CastingEndpoints.AddParticipant)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(409)]
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
         [CurrentUser]
         public async Task<IActionResult> AddParticipant(Guid castingId, Guid userId)
         {
-
-
             try
             {
                 await _castingService.AddParticipant(castingId, userId);
                 return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // np. casting nie rekrutuje dla roli użytkownika
+                _logger.LogWarning(ex, "Failed to add participant. {Message}", ex.Message);
+                return Conflict(new { message = ex.Message });
             }
             catch (KeyNotFoundException ex)
             {
@@ -185,7 +187,7 @@ namespace WebApi.Controllers
             }
         }
 
-        ///<summary> Get Castings By Participant Id</summary>
+        ///<summary> Get Castings By Participant Id (lista castingów, do których user dołączył).</summary>
         [HttpGet(Endpoints.CastingEndpoints.GetCastingsByParticipantId)]
         [ProducesResponseType(typeof(IEnumerable<CastingDto.Read>), 200)]
         [ProducesResponseType(404)]
@@ -197,12 +199,40 @@ namespace WebApi.Controllers
             return Ok(castings.Select(c => c.ToReadDto()));
         }
 
+        /// <summary>Returns participations (assignments) of the specified user, including per-casting status.</summary>
+        [HttpGet(Endpoints.CastingEndpoints.GetParticipationsByUserId)]
+        [ProducesResponseType(typeof(IEnumerable<Application.Dtos.CastingParticipationDto>), 200)]
+        [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
+        [CurrentUser]
+        public async Task<ActionResult<IEnumerable<Application.Dtos.CastingParticipationDto>>> GetParticipationsByUserId([FromRoute] Guid userId)
+        {
+            var assignments = await _castingService.GetParticipationsByUserId(userId);
+            if (assignments.Count == 0)
+                return Ok(Array.Empty<Application.Dtos.CastingParticipationDto>());
+
+            var result = assignments.Select(a => new Application.Dtos.CastingParticipationDto
+            {
+                CastingId = a.CastingId,
+                AssignmentId = a.Id,
+                AssignmentStatus = a.UserAcceptanceStatus switch
+                {
+                    CastingUserStatus.Pending  => "Pending",
+                    CastingUserStatus.Active   => "Active",
+                    CastingUserStatus.Rejected => "Rejected",
+                    _ => throw new InvalidOperationException("Unsupported assignment status value.")
+                },
+                Role = a.Role.Name,
+                Title = a.Casting.Title,
+                EventDate = a.Casting.EventDate,
+                Location = a.Casting.Location
+            });
+
+            return Ok(result);
+        }
+
         /// <summary>
         /// Changes the status of a casting.
         /// </summary>
-        /// <param name="castingId"></param>
-        /// <param name="status">Options: Active, Closed, Cancelled, Finished </param>
-        /// <returns></returns>
         [HttpGet(Endpoints.CastingEndpoints.ChangeCastingStatus)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
@@ -211,13 +241,10 @@ namespace WebApi.Controllers
         {
             try
             {
-                CastingStatus castingStatus;
-                if (!Enum.TryParse<CastingStatus>(status, true, out castingStatus))
+                if (!Enum.TryParse<CastingStatus>(status, true, out var castingStatus))
                 {
                     return BadRequest(new { message = "Invalid status value. Allowed values are: Active, Closed, Cancelled, Finished." });
                 }
-
-
 
                 await _castingService.ChangeCastingStatus(castingId, castingStatus);
                 return NoContent();
@@ -227,8 +254,6 @@ namespace WebApi.Controllers
                 _logger.LogWarning(ex, "Failed to change casting status. {Message}", ex.Message);
                 return NotFound(new { message = ex.Message });
             }
-
-
         }
         /// <summary>
         /// Get casting banner by casting Id.
@@ -241,8 +266,6 @@ namespace WebApi.Controllers
         [RoleAuthorize("Admin", "Model", "Photographer", "Designer", "Volunteer")]
         public async Task<IActionResult> GetCastingBanner(Guid castingId)
         {
-
-
             try
             {
                 var banner = await _castingBannerService.GetBannerAsync(castingId);
@@ -271,11 +294,11 @@ namespace WebApi.Controllers
         [ProducesResponseType(404)]
         [Consumes("multipart/form-data")]
         [RoleAuthorize("Admin")]
-
         public async Task<IActionResult> UploadCastingBanner([FromRoute] Guid castingId, [FromForm] UploadPhotoForm form)
         {
             if (form.File is null || form.File.Length == 0)
                 return BadRequest("No file provided.");
+
             try
             {
                 var banner = await _castingBannerService.SaveBanerAsync(castingId, form.File);
@@ -334,6 +357,7 @@ namespace WebApi.Controllers
                 return Ok(assignments.Select(a => new
                 {
                     AssignmentId = a.Id,
+                    Role = a.Role.Name, // ⬅ rola przypisana w tym castingu
                     User = a.User.ToReadDto()
                 }));
             }
@@ -373,7 +397,6 @@ namespace WebApi.Controllers
                     return Ok(result);
                 }
 
-
                 return Ok(new
                 {
                     Statistics = new
@@ -409,6 +432,7 @@ namespace WebApi.Controllers
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
         [ProducesResponseType(404)]
+        [ProducesResponseType(409)]
         [RoleAuthorize("Admin")]
         public async Task<IActionResult> ChangeUserAssignmentStatus([FromRoute] Guid assigmentId, [FromQuery] string AssignmentStatus)
         {
@@ -417,19 +441,22 @@ namespace WebApi.Controllers
                 CastingUserStatus parsedAssignmentStatus;
                 if (!Enum.TryParse<CastingUserStatus>(AssignmentStatus, true, out parsedAssignmentStatus))
                 {
-                    return BadRequest(new { message = "Invalid status value. Allowed values are: Active, Rejected." });
+                    return BadRequest(new { message = "Invalid status value. Allowed values are: Pending, Active, Rejected." });
                 }
                 await _castingService.ChangeUserCastingStatus(assigmentId, parsedAssignmentStatus);
                 return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                // np. przekroczony limit ról
+                _logger.LogWarning(ex, "Failed to change user assignment status. {Message}", ex.Message);
+                return Conflict(new { message = ex.Message });
             }
             catch (KeyNotFoundException ex)
             {
                 _logger.LogWarning(ex, "Failed to change user assignment status. {Message}", ex.Message);
                 return NotFound(new { message = ex.Message });
             }
-
-
-
         }
 
         [HttpGet(Endpoints.CastingEndpoints.GettActiveUsersByCastingId)]
@@ -450,6 +477,7 @@ namespace WebApi.Controllers
                 {
                     AssignmentId = a.Id,
                     AssignmentStatus = a.UserAcceptanceStatus.ToString(),
+                    Role = a.Role.Name,
                     User = a.User.ToReadDto()
                 }));
             }

@@ -1,17 +1,9 @@
-import React, { useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import ModelDashboard from "../components/Dashboard/ModelDashboard";
-import OrganizerDashboard from "../components/Dashboard/OrganizerDashboard";
+import ModelDashboard from "../components/Dashboard/Model/ModelDashboard.jsx";
+import OrganizerDashboard from "../components/Dashboard/Organizer/OrganizerDashboard";
 
 const Dashboard = () => {
   const { currentUser } = useAuth();
-
-  useEffect(() => {
-    if (currentUser) {
-      console.log("🔑 Zalogowany użytkownik:", currentUser);
-      console.log("📌 Role użytkownika:", currentUser.role);
-    }
-  }, [currentUser]);
 
   if (!currentUser) {
     return (

@@ -86,8 +86,6 @@ export async function updateUserProfile(userId, profileData, token) {
   });
 }
 
-
-
 //Edit photos
 // Upload profile photo
 export async function uploadUserPhoto(userId, file) {
@@ -104,20 +102,22 @@ export async function uploadUserPhoto(userId, file) {
 export const fetchUserPhotos = async (userId, accessToken) => {
   try {
     const response = await fetch(`${API_URL}/api/users/${userId}/photos`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching user photos:', error);
+    console.error("Error fetching user photos:", error);
     throw error;
   }
 };
@@ -125,108 +125,134 @@ export const fetchUserPhotos = async (userId, accessToken) => {
 export const addUserPhoto = async (userId, photoFile, accessToken) => {
   try {
     const formData = new FormData();
-    formData.append('File', photoFile);
+    formData.append("File", photoFile);
 
     const response = await fetch(`${API_URL}/api/users/${userId}/photos`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: formData,
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error adding user photo:', error);
+    console.error("Error adding user photo:", error);
     throw error;
   }
 };
 export const deleteUserPhoto = async (userId, photoId, accessToken) => {
   try {
-    const response = await fetch(`${ API_URL}/api/users/${userId}/photos/${photoId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
+    const response = await fetch(
+      `${API_URL}/api/users/${userId}/photos/${photoId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return true;
   } catch (error) {
-    console.error('Error deleting user photo:', error);
+    console.error("Error deleting user photo:", error);
     throw error;
   }
 };
 
 export const setMainUserPhoto = async (userId, photoId, accessToken) => {
   try {
-    const response = await fetch(`${ API_URL}/api/users/${userId}/photos/${photoId}/main`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
+    const response = await fetch(
+      `${API_URL}/api/users/${userId}/photos/${photoId}/main`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return true;
   } catch (error) {
-    console.error('Error setting main user photo:', error);
+    console.error("Error setting main user photo:", error);
     throw error;
   }
 };
 
 // Experience Management Functions
-export const addUserExperience = async (userId, experienceData, accessToken) => {
+export const addUserExperience = async (
+  userId,
+  experienceData,
+  accessToken
+) => {
   try {
-    const response = await fetch(`${ API_URL}/experience/${userId}/add`, {
-      method: 'POST',
+    const response = await fetch(`${API_URL}/experience/${userId}/add`, {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(experienceData)
+      body: JSON.stringify(experienceData),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error adding experience:', error);
+    console.error("Error adding experience:", error);
     throw error;
   }
 };
 
-export const updateUserExperience = async (userId, experienceId, experienceData, accessToken) => {
+export const updateUserExperience = async (
+  userId,
+  experienceId,
+  experienceData,
+  accessToken
+) => {
   const dataToSend = { ...experienceData };
   if (dataToSend.stillWorking) {
     delete dataToSend.stillWorking;
     delete dataToSend.endDate;
   }
 
-  const res = await fetch(`${API_URL}/experience/${userId}/update/${experienceId}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(dataToSend)
-  });
+  const res = await fetch(
+    `${API_URL}/experience/${userId}/update/${experienceId}`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(dataToSend),
+    }
+  );
 
   if (!res.ok) {
     let errorMsg = `HTTP error! status: ${res.status}`;
@@ -237,13 +263,20 @@ export const updateUserExperience = async (userId, experienceId, experienceData,
     throw new Error(errorMsg);
   }
 
-  return true; 
+  return true;
 };
-export const deleteUserExperience = async (userId, experienceId, accessToken) => {
-  const res = await fetch(`${API_URL}/experience/${userId}/delete/${experienceId}`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${accessToken}` }
-  });
+export const deleteUserExperience = async (
+  userId,
+  experienceId,
+  accessToken
+) => {
+  const res = await fetch(
+    `${API_URL}/experience/${userId}/delete/${experienceId}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    }
+  );
 
   if (!res.ok) {
     let errorMsg = `HTTP error! status: ${res.status}`;
@@ -254,26 +287,28 @@ export const deleteUserExperience = async (userId, experienceId, accessToken) =>
     throw new Error(errorMsg);
   }
 
-  return true; 
+  return true;
 };
 // Favorites Management Functions
 export const fetchFavoriteUsers = async (accessToken) => {
   try {
     const response = await fetch(`${API_BASE_URL}/favourites`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching favorite users:', error);
+    console.error("Error fetching favorite users:", error);
     throw error;
   }
 };
@@ -281,9 +316,9 @@ export const fetchFavoriteUsers = async (accessToken) => {
 export const addFavorite = async (userId, accessToken) => {
   try {
     const response = await fetch(`${API_BASE_URL}/favourites/${userId}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
@@ -291,13 +326,15 @@ export const addFavorite = async (userId, accessToken) => {
       // try to parse error body, but only if exists
       const text = await response.text();
       const errorData = text ? JSON.parse(text) : {};
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     const text = await response.text();
     return text ? JSON.parse(text) : true; // return true if empty
   } catch (error) {
-    console.error('Error adding favorite:', error);
+    console.error("Error adding favorite:", error);
     throw error;
   }
 };
@@ -305,38 +342,39 @@ export const addFavorite = async (userId, accessToken) => {
 export const removeFavorite = async (userId, accessToken) => {
   try {
     const response = await fetch(`${API_BASE_URL}/favourites/${userId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!response.ok) {
       const text = await response.text();
       const errorData = text ? JSON.parse(text) : {};
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return true; // success
   } catch (error) {
-    console.error('Error removing favorite:', error);
+    console.error("Error removing favorite:", error);
     throw error;
   }
 };
 
-
 export const checkIsFavorite = async (userId, accessToken) => {
   try {
     const response = await fetch(`${API_BASE_URL}/favourites/${userId}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     return response.ok;
   } catch (error) {
-    console.error('Error checking favorite status:', error);
+    console.error("Error checking favorite status:", error);
     return false;
   }
 };
@@ -344,29 +382,30 @@ export const checkIsFavorite = async (userId, accessToken) => {
 export const fetchUserRoles = async (accessToken) => {
   try {
     const response = await fetch(`${API_BASE_URL}/user/roles`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     return await response.json();
   } catch (error) {
-    console.error('Error fetching user roles:', error);
+    console.error("Error fetching user roles:", error);
     throw error;
   }
 };
 
-
 // Filter users
 export const filterUsers = async (filters, accessToken) => {
   const queryParams = new URLSearchParams();
-  
+
   // Simple filters
   if (filters.minAge) queryParams.append("MinAge", filters.minAge);
   if (filters.maxAge) queryParams.append("MaxAge", filters.maxAge);
@@ -377,13 +416,17 @@ export const filterUsers = async (filters, accessToken) => {
 
   // Array filters – append each value separately
   if (filters.hairColors?.length) {
-    filters.hairColors.forEach(color => queryParams.append("HairColor", color));
+    filters.hairColors.forEach((color) =>
+      queryParams.append("HairColor", color)
+    );
   }
   if (filters.clothingSizes?.length) {
-    filters.clothingSizes.forEach(size => queryParams.append("ClothingSize", size));
+    filters.clothingSizes.forEach((size) =>
+      queryParams.append("ClothingSize", size)
+    );
   }
   if (filters.cities?.length) {
-    filters.cities.forEach(city => queryParams.append("City", city));
+    filters.cities.forEach((city) => queryParams.append("City", city));
   }
 
   // Pagination
@@ -410,17 +453,14 @@ export const filterUsers = async (filters, accessToken) => {
   return {
     users: Array.isArray(data) ? data : data.users || data.items || [],
     totalCount:
-      data.totalCount ||
-      data.total ||
-      (Array.isArray(data) ? data.length : 0),
+      data.totalCount || data.total || (Array.isArray(data) ? data.length : 0),
     currentPage: data.currentPage || data.page || filters.pageNumber || 1,
     totalPages:
       data.totalPages ||
       Math.ceil(
         (data.totalCount ||
           data.total ||
-          (Array.isArray(data) ? data.length : 0)) /
-          (filters.pageSize || 12)
+          (Array.isArray(data) ? data.length : 0)) / (filters.pageSize || 12)
       ),
   };
 };
@@ -432,16 +472,16 @@ export const filterUsers = async (filters, accessToken) => {
  */
 export const fetchPendingUsers = async (accessToken) => {
   const response = await fetch(`${API_BASE_URL}/user/Pending`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      'accept': 'application/json'
-    }
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      accept: "application/json",
+    },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch pending users');
+    throw new Error("Failed to fetch pending users");
   }
 
   return await response.json();
@@ -456,15 +496,15 @@ export const fetchPendingUsers = async (accessToken) => {
  */
 export const updateUserStatus = async (userId, status, accessToken) => {
   const response = await fetch(`${API_BASE_URL}/user/${userId}/statusUpdate`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json-patch+json',
-      'accept': 'application/json'
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json-patch+json",
+      accept: "application/json",
     },
     body: JSON.stringify({
-      status: status
-    })
+      status: status,
+    }),
   });
 
   if (!response.ok) {
@@ -481,20 +521,19 @@ export const updateUserStatus = async (userId, status, accessToken) => {
  */
 export const fetchAllPendingPhotos = async (accessToken) => {
   const response = await fetch(`${API_BASE_URL}/api/users/photos/allPending`, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'accept': 'application/json'
-    }
+      Authorization: `Bearer ${accessToken}`,
+      accept: "application/json",
+    },
   });
 
   if (!response.ok) {
-    throw new Error('Failed to fetch all pending photos');
+    throw new Error("Failed to fetch all pending photos");
   }
 
   return await response.json();
 };
-
 
 /**
  * Update photo status (accept or reject)
@@ -505,10 +544,9 @@ export const fetchAllPendingPhotos = async (accessToken) => {
  * @returns {Promise<Object>} - Updated photo data
  */
 export const updatePhotoStatus = async (photosToUpdate, token) => {
-  
-  const payload = photosToUpdate.map(photo => ({
+  const payload = photosToUpdate.map((photo) => ({
     id: photo.id,
-    photoStatus: photo.photoStatus // or photoStatus directly
+    photoStatus: photo.photoStatus, // or photoStatus directly
   }));
 
   const response = await fetch(`${API_BASE_URL}/api/users/photos/updateStatus`, {
@@ -521,7 +559,7 @@ export const updatePhotoStatus = async (photosToUpdate, token) => {
   });
 
   if (!response.ok) {
-    throw new Error('Failed to update photo status');
+    throw new Error("Failed to update photo status");
   }
 
   return true;
