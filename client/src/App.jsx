@@ -19,7 +19,6 @@ import ProfileFilterPage from "./Pages/ProfileFilterPage";
 import StatusUpdatePage from "./Pages/StatusUpdatePage";
 import ContactPage from "./Pages/ContactPage.jsx";
 
-
 function App() {
   return (
     <AuthProvider>
@@ -39,8 +38,11 @@ function App() {
                   <Route path="/edit-profile" element={<EditProfilePage />} />
                   <Route path="/favorites" element={<FavoritesPage />} />
                   <Route path="/filterUsers" element={<ProfileFilterPage />} />
-                  <Route path="/pending-accounts" element={<StatusUpdatePage />} />
-                  <Route path="/contact-us" element={<ContactPage />} />
+                  <Route
+                    path="/pending-accounts"
+                    element={<StatusUpdatePage />}
+                  />
+                  <Route path="/contact" element={<ContactPage />} />
                 </Routes>
               </main>
               <Footer />
