@@ -473,40 +473,11 @@ namespace WebApi.Controllers
                     string[] result = [];
                     return Ok(result);
                 }
-
                 return Ok(assignments.Select(a => new
                 {
                     AssignmentId = a.Id,
                     AssignmentStatus = a.UserAcceptanceStatus.ToString(),
-                    Role = a.Role.Name, // ⬅ rola przypisana w tym castingu
-                    User = a.User.ToReadDto()
-                }));
-            }
-            catch (KeyNotFoundException ex)
-            {
-                _logger.LogWarning(ex, "Failed to get active users. {Message}", ex.Message);
-                return NotFound(new { message = ex.Message });
-            }
-        }
-
-        [HttpGet(Endpoints.CastingEndpoints.GettActiveUsersByCastingId)]
-        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
-        [ProducesResponseType(404)]
-        [RoleAuthorize("Admin")]
-        public async Task<IActionResult> GetActiveUsersByCastingId([FromRoute] Guid castingId)
-        {
-            try
-            {
-                var assignments = await _castingService.GetCastingUsersByStatus(castingId, CastingUserStatus.Active);
-                if (assignments == null || !assignments.Any())
-                {
-                    string[] result = [];
-                    return Ok(result);
-                }
-                return Ok(assignments.Select(a => new
-                {
-                    AssignmentId = a.Id,
-                    AssignmentStatus = a.UserAcceptanceStatus.ToString(),
+                    Role = a.Role.Name,
                     User = a.User.ToReadDto()
                 }));
             }

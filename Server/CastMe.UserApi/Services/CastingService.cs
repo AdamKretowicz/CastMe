@@ -223,17 +223,8 @@ namespace WebApi.Services
 
         public async Task<IEnumerable<CastingAssignment>> GetCastingUsersByStatus(Guid castingId, CastingUserStatus status)
         {
-            var assignments = await _context.Assignments
-                .AsNoTracking()
-                .Include(u => u.User)
-                    .ThenInclude(u => u.Photos)
-                .Include(r => r.Role)
-                .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == status)
-                .ToListAsync();
-
-        public async Task<IEnumerable<CastingAssignment>> GetCastingUsersByStatus(Guid castingId, CastingUserStatus status)
-        {
             var assigments = await _context.Assignments
+                .AsNoTracking()
                 .Include(u => u.User)
                 .ThenInclude(u => u.Photos)
                 .Include(r => r.Role)
