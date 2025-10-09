@@ -1,5 +1,6 @@
 // src/components/Casting/Organizer/OrganizerDashboard.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../../../context/AuthContext";
 import { useCasting } from "../../../context/CastingContext";
 import Button from "../../UI/Button";
 import { Plus } from "lucide-react";
@@ -8,17 +9,32 @@ import { useCastingBanners } from "../../../hooks/useCastingBanners";
 import CreateCastingForm from "./CreateCastingForm";
 import OrganizerCastingList from "./OrganizerCastingList";
 import ApplicationsPanel from "./ApplicationsPanel";
-import ParticipantsModal from "./ParticipantsModal"; // <-- UŻYWAMY DEDYKOWANEGO MODALA
+import ParticipantsModal from "./ParticipantsModal";
 
 export default function OrganizerDashboard() {
-  const { castings, createCasting, getCastingApplications, isLoading } =
-    useCasting();
+  const { currentUser } = useAuth();
+
+  // ⬇ dodane możliwe metody refetchu (różne nazwy – użyjemy tej, która istnieje)
+  const {
+    castings,
+    createCasting,
+    getCastingApplications,
+    fetchCastingApplications,
+    isLoading,
+    fetchCastings,
+    refreshCastings,
+    reloadCastings,
+  } = useCasting();
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCasting, setSelectedCasting] = useState(null);
 
   // modal uczestników (dla organizatora)
   const [participantsModalOpen, setParticipantsModalOpen] = useState(false);
+
+  // helper do odświeżenia listy castingów po zmianach w modalu
+  const refetchCastings =
+    fetchCastings || refreshCastings || reloadCastings || null;
 
   // nagłówek
   const header = useMemo(
@@ -35,16 +51,28 @@ export default function OrganizerDashboard() {
     []
   );
 
-  // sort: createdAt DESC (fallback: eventDate DESC)
+  // ⬇️ CASTINGI ORGANIZATORA: filtr organizerId + sort DESC (createdAt/eventDate)
   const organizerCastings = useMemo(() => {
-    const arr = Array.isArray(castings) ? [...castings] : [];
+    const all = Array.isArray(castings) ? castings : [];
+    const mine = currentUser?.id
+      ? all.filter((c) => c?.organizerId === currentUser.id)
+      : all;
+    const arr = [...mine];
     arr.sort((a, b) => {
       const ad = new Date(a?.createdAt || a?.eventDate || 0).getTime();
       const bd = new Date(b?.createdAt || b?.eventDate || 0).getTime();
       return bd - ad;
     });
     return arr;
-  }, [castings]);
+  }, [castings, currentUser?.id]);
+
+  // Po refetchu listy z backendu odświeżamy obiekt zaznaczonego castingu,
+  // żeby na karcie i w panelu były aktualne liczniki.
+  useEffect(() => {
+    if (!selectedCasting?.id) return;
+    const updated = organizerCastings.find((c) => c.id === selectedCasting.id);
+    if (updated) setSelectedCasting(updated);
+  }, [organizerCastings, selectedCasting?.id]);
 
   // bannery
   const { banners: castingBanners, fetchBannerFor } =
@@ -88,10 +116,11 @@ export default function OrganizerDashboard() {
             }}
           />
 
-          {/* Panel zgłoszeń zostaje po staremu (gdy dodacie statusy, wpięjemy akcje akceptacji/odrzucenia) */}
+          {/* Panel zgłoszeń: przekazujemy też fetcher, aby po zmianie statusu był refetch */}
           <ApplicationsPanel
             selectedCasting={selectedCasting}
             getCastingApplications={getCastingApplications}
+            fetchCastingApplications={fetchCastingApplications}
           />
         </div>
       </div>
@@ -101,10 +130,12 @@ export default function OrganizerDashboard() {
         casting={selectedCasting}
         isOpen={participantsModalOpen}
         onClose={() => setParticipantsModalOpen(false)}
-        onChanged={({ type, userId }) => {
-          // opcjonalnie: tu możesz odświeżyć szczegóły castingu / liczniki ról po "removed"
-          // np. re-fetch castings w useCasting() lub lokalna korekta acceptedCount
-          // console.log(type, userId);
+        onChanged={() => {
+          // Po zaakceptowaniu/odrzuceniu/przeniesieniu odśwież listę castingów,
+          // żeby liczniki ról i stats na kartach były aktualne.
+          refetchCastings?.();
+          // Jeśli trzeba, można też odświeżyć listę zgłoszeń dla zaznaczonego castingu:
+          // fetchCastingApplications?.(selectedCasting?.id);
         }}
       />
     </div>

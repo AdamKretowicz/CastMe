@@ -3,7 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import Card from "../../UI/Card";
 import Button from "../../UI/Button";
 import Input from "../../UI/Input";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { BannerImage } from "../../UI/BannerImage";
 
@@ -155,9 +155,6 @@ export default function CreateCastingForm({
 
   /**
    * Upload bannera – POST /casting/casting/{castingId}/banner (pole: "File")
-   * Po udanym uploadzie zapisujemy URL (z cache-bust) do localStorage,
-   * aby UI natychmiast widziało obraz i nie robiło zbędnego GET, który może
-   * chwilowo zwracać 404.
    */
   const uploadCastingBanner = useCallback(async (castingId, file) => {
     try {
@@ -243,7 +240,6 @@ export default function CreateCastingForm({
         try {
           setIsUploadingBanner(true);
           const url = await uploadCastingBanner(newId, formData.bannerFile);
-          // poinformuj dashboard, aby ewentualnie dociągnął / odświeżył banner
           onBannerUploaded?.(newId, url);
         } catch (err) {
           console.error("Błąd uploadu bannera:", err);
@@ -356,13 +352,17 @@ export default function CreateCastingForm({
 
             <div className="md:col-span-5">
               {!showCompensation ? (
-                <button
-                  type="button"
-                  onClick={() => setShowCompensation(true)}
-                  className="inline-flex items-center text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
-                >
-                  <span>Dodaj wynagrodzenie</span>
-                </button>
+                // ⬇️ kontener flex z wyrównaniem w pionie do środka, by zgrać z polem „Lokalizacja”
+                <div className="md:h-full flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowCompensation(true)}
+                    className="inline-flex items-center gap-2 text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4 cursor-pointer" />
+                    <span className="cursor-pointer">Dodaj wynagrodzenie</span>
+                  </button>
+                </div>
               ) : (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -514,9 +514,10 @@ export default function CreateCastingForm({
                 <button
                   type="button"
                   onClick={addEmptyRoleRow}
-                  className="inline-flex items-center text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
+                  className="inline-flex items-center gap-2 text-[#EA1A62] hover:text-[#d01757] text-sm font-medium"
                 >
-                  Dodaj rolę
+                  <Plus className="w-4 h-4 cursor-pointer" />
+                  <span className="cursor-pointer">Dodaj rolę</span>
                 </button>
               )}
           </div>

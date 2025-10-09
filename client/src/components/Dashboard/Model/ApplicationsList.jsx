@@ -1,39 +1,55 @@
-import React from "react";
 import Card from "../../UI/Card";
-import { AlertCircle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { Calendar, MapPin, BadgeCheck, Clock, XCircle } from "lucide-react";
 
-const formatDate = (d) => new Date(d).toLocaleDateString("pl-PL");
-
-const statusColor = (s) =>
-  s === "pending"
-    ? "text-yellow-600 bg-yellow-100"
-    : s === "accepted"
-    ? "text-green-600 bg-green-100"
-    : s === "rejected"
-    ? "text-red-600 bg-red-100"
-    : "text-gray-600 bg-gray-100";
-
-const statusIcon = (s) =>
-  s === "pending" ? (
-    <AlertCircle className="w-4 h-4" />
-  ) : s === "accepted" ? (
-    <CheckCircle className="w-4 h-4" />
-  ) : s === "rejected" ? (
-    <XCircle className="w-4 h-4" />
-  ) : (
-    <Clock className="w-4 h-4" />
+function StatusPill({ status }) {
+  const s = String(status).toLowerCase();
+  if (s === "active") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-green-50 text-green-800">
+        <BadgeCheck className="w-3.5 h-3.5" />
+        Zaakceptowano
+      </span>
+    );
+  }
+  if (s === "pending") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-yellow-50 text-yellow-800">
+        <Clock className="w-3.5 h-3.5" />
+        Oczekujące
+      </span>
+    );
+  }
+  if (s === "rejected") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-red-50 text-red-800">
+        <XCircle className="w-3.5 h-3.5" />
+        Odrzucono
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+      {status}
+    </span>
   );
+}
 
-const statusText = (s) =>
-  s === "pending"
-    ? "Oczekuje"
-    : s === "accepted"
-    ? "Zaakceptowany"
-    : s === "rejected"
-    ? "Odrzucony"
-    : "Nieznany";
+const roleDisplayMap = {
+  Model: "Model",
+  Photographer: "Fotograf",
+  Designer: "Projektant",
+  Volunteer: "Wolontariusz",
+};
 
 export default function ApplicationsList({ applications, castings }) {
+  // applications: [{ castingId, assignmentId, assignmentStatus, role, title?, eventDate?, location? }]
+  const rows = Array.isArray(aplicationsFix(applications)) ? applications : [];
+
+  function aplicationsFix(a) {
+    // helper defensive only
+    return a;
+  }
+
   return (
     <Card>
       <Card.Header>
@@ -42,38 +58,51 @@ export default function ApplicationsList({ applications, castings }) {
         </h2>
       </Card.Header>
       <Card.Content>
-        {applications.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">
-            Nie masz jeszcze żadnych zgłoszeń
-          </p>
+        {!rows.length ? (
+          <p className="text-gray-500 text-center py-4">Brak zgłoszeń.</p>
         ) : (
           <div className="space-y-3">
-            {applications.map((application) => {
-              const casting = castings.find(
-                (c) => c.id === application.castingId
-              );
-              if (!casting) return null;
+            {rows.map((row) => {
+              const title =
+                row.title ||
+                castings?.find((c) => c.id === row.castingId)?.title ||
+                "—";
+              const location =
+                row.location ||
+                castings?.find((c) => c.id === row.castingId)?.location ||
+                "—";
+              const eventDate =
+                row.eventDate ||
+                castings?.find((c) => c.id === row.castingId)?.eventDate ||
+                null;
               return (
                 <div
-                  key={application.id}
-                  className="border border-gray-200 rounded-lg p-3"
+                  key={row.assignmentId || row.castingId}
+                  className="border rounded-lg p-3 bg-white flex items-center justify-between"
                 >
-                  <h3 className="font-medium text-gray-900 mb-2 text-sm">
-                    {casting.title}
-                  </h3>
-                  <div
-                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusColor(
-                      application.status
-                    )}`}
-                  >
-                    {statusIcon(application.status)}
-                    <span className="ml-1">
-                      {statusText(application.status)}
-                    </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 truncate">
+                      {title}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                      <span className="inline-flex items-center">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        {location}
+                      </span>
+                      <span className="inline-flex items-center">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        {eventDate
+                          ? new Date(eventDate).toLocaleDateString("pl-PL")
+                          : "—"}
+                      </span>
+                      {row.role ? (
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">
+                          {roleDisplayMap[row.role] || row.role}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Zgłoszono: {formatDate(application.appliedAt)}
-                  </p>
+                  <StatusPill status={row.assignmentStatus} />
                 </div>
               );
             })}

@@ -6,7 +6,9 @@ import {
   Info,
   Mail,
   MoreHorizontal,
+  Heart,
   LayoutDashboard,
+  Users,
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
@@ -92,11 +94,59 @@ function useMenu() {
 // avatar helpers
 const normalizeUrl = (p) => {
   if (!p) return null;
-  if (/^https?:\/\//i.test(p)) return p;
-  return getPhotoUrl(p);
+  if (/^https?:\/\//i.test(p)) return p; // pełny URL
+  return getPhotoUrl(p); // zbuduj z VITE_API_URL
 };
 const toInitials = (f, l) =>
   [f?.[0], l?.[0]].filter(Boolean).join("").toUpperCase() || "";
+
+/** wybór URL-a avatara z profilu (różne możliwe nazwy pól) */
+function pickAvatarFromProfile(profile) {
+  if (!profile) return null;
+
+  // 1) bezpośrednie pola na profilu
+  const direct =
+    profile.mainPhotoUrl ??
+    profile.avatarUrl ??
+    profile.photoUrl ??
+    profile.mainPhoto?.url ??
+    profile.avatar?.url ??
+    profile.photo?.url ??
+    null;
+  if (direct) return normalizeUrl(direct);
+
+  // względne na profilu
+  const relOnProfile =
+    profile.mainPhoto?.relativeUrl ??
+    profile.avatar?.relativeUrl ??
+    profile.photo?.relativeUrl ??
+    profile.mainPhoto?.relativePath ??
+    profile.avatar?.relativePath ??
+    profile.photo?.relativePath ??
+    profile.mainPhoto?.filePath ??
+    profile.avatar?.filePath ??
+    profile.photo?.filePath ??
+    null;
+  if (relOnProfile) return normalizeUrl(relOnProfile);
+
+  // 2) z tablicy photos (najpierw isMain)
+  const photos = Array.isArray(profile.photos) ? profile.photos : [];
+  if (photos.length) {
+    const main = photos.find((p) => p?.isMain) ?? photos[0] ?? null;
+    if (main) {
+      const pUrl = main.url ?? main.photoUrl ?? main.absoluteUrl ?? null;
+      const pRel =
+        main.relativeUrl ??
+        main.relativePath ??
+        main.filePath ??
+        main.path ??
+        null;
+      return normalizeUrl(pUrl ?? pRel);
+    }
+  }
+
+  return null;
+}
 
 const Header = () => {
   const { currentUser, logout } = useAuth();
@@ -104,6 +154,7 @@ const Header = () => {
   const location = useLocation();
 
   const isLarge = useMediaQuery("(min-width: 1024px)");
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   const userMenu = useMenu();
   const moreMenu = useMenu();
@@ -111,11 +162,19 @@ const Header = () => {
   const [profile, setProfile] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState(null);
 
+  // helper do ról „adminopodobnych”
+  const isAdminLike = ["Admin", "Organizer", "Organizator"].includes(
+    currentUser?.role
+  );
+
+  // zamknij dropdowny przy zmianie auth
   useEffect(() => {
     userMenu.closeNow();
     moreMenu.closeNow();
-  }, [currentUser]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
+  // dociągnij profil usera do avatara (odporne na zmiany pól)
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -131,10 +190,9 @@ const Header = () => {
           method: "GET",
         });
         if (!alive) return;
+
         setProfile(prof || null);
-        const photos = Array.isArray(prof?.photos) ? prof.photos : [];
-        const main = photos.find((p) => p?.isMain) ?? photos[0] ?? null;
-        setAvatarUrl(normalizeUrl(main?.url) || null);
+        setAvatarUrl(pickAvatarFromProfile(prof) || null);
       } catch {
         if (alive) {
           setProfile(null);
@@ -154,6 +212,7 @@ const Header = () => {
     navigate("/");
   };
 
+  // === NAV LINKS (bez pozycji adminowych; są tylko w menu użytkownika) ===
   const guestLinks = [
     { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
     { to: "/about", label: "O nas", icon: <Info className="w-4 h-4" /> },
@@ -164,16 +223,31 @@ const Header = () => {
       icon: <Camera className="w-5 h-5" />,
     },
   ];
-  const userLinks = [
-    { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
+
+  const authedBaseLinks = [
     {
       to: "/dashboard",
       label: "Dashboard",
-      icon: <LayoutDashboard className="w-4 h-4" />,
+      icon: <LayoutDashboard className="w-5 h-5" />,
     },
+    {
+      to: "/filterUsers",
+      label: "Użytkownicy",
+      icon: <Users className="w-5 h-5" />,
+    },
+    {
+      to: "/castings",
+      label: "Castingi",
+      icon: <Camera className="w-5 h-5" />,
+    },
+    { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
   ];
-  const navLinks = currentUser ? userLinks : guestLinks;
 
+  // Desktop i Mobile „Więcej” korzystają z tych samych linków bazowych (bez adminowych)
+  const navLinksDesktop = currentUser ? authedBaseLinks : guestLinks;
+  const navLinksMobile = currentUser ? authedBaseLinks : guestLinks;
+
+  // === Przyciski logowania/rejestracji (styl jak u Ciebie) ===
   const activeBtn =
     "inline-flex items-center justify-center rounded-lg bg-[#EA1A62] text-white transition-colors px-3 py-1 text-sm sm:px-4 sm:py-2 sm:text-base hover:bg-[#d1185a]";
   const inactiveBtn =
@@ -187,13 +261,16 @@ const Header = () => {
     toInitials(profile?.firstName, profile?.lastName) ||
     (currentUser?.email ? currentUser.email[0]?.toUpperCase() : "");
 
+  // Link logo jak w masterze: dla zalogowanego -> /dashboard, dla gościa -> /
+  const logoLink = currentUser ? "/dashboard" : "/";
+
   return (
     <header className="bg-white shadow-sm border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 relative">
           {/* Logo (bez outline/ringu) */}
           <Link
-            to="/"
+            to={logoLink}
             className="flex-shrink-0 rounded focus:outline-none focus-visible:outline-none"
           >
             <img
@@ -207,7 +284,7 @@ const Header = () => {
           {/* Desktop nav */}
           <div className="flex-1 hidden lg:flex justify-center">
             <nav className="flex space-x-4" aria-label="Primary">
-              {navLinks.map((link) => (
+              {navLinksDesktop.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
@@ -231,11 +308,18 @@ const Header = () => {
               <>
                 <Link
                   to="/login"
-                  className={`${loginBtnClass} hidden sm:inline-flex`}
+                  className={`${loginBtnClass} ${
+                    isMobile ? "hidden" : "inline-flex"
+                  }`}
                 >
                   Logowanie
                 </Link>
-                <Link to="/register" className={registerBtnClass}>
+                <Link
+                  to="/register"
+                  className={`${registerBtnClass} ${
+                    isMobile ? "hidden" : "inline-flex"
+                  }`}
+                >
                   Rejestracja
                 </Link>
               </>
@@ -243,11 +327,11 @@ const Header = () => {
               <div
                 className="relative"
                 onMouseEnter={() => {
-                  userMenu.openNow(); // ← bez isLarge
+                  userMenu.openNow();
                   moreMenu.closeNow();
                 }}
                 onMouseLeave={() => {
-                  userMenu.closeNow(150); // ← bez isLarge
+                  userMenu.closeNow(150);
                 }}
               >
                 <button
@@ -258,12 +342,11 @@ const Header = () => {
                   aria-expanded={userMenu.open}
                   aria-controls="user-menu"
                   onMouseEnter={() => {
-                    // ← bez isLarge
                     userMenu.openNow();
                     moreMenu.closeNow();
                   }}
                   onClick={() => {
-                    // zostaw klik jako alternatywę
+                    // klik jako alternatywa (np. dotyk)
                     userMenu.setOpen((v) => {
                       const next = !v;
                       if (next) moreMenu.closeNow();
@@ -297,10 +380,33 @@ const Header = () => {
                     ref={userMenu.menuRef}
                     role="menu"
                     aria-label="Menu użytkownika"
-                    className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[180px] py-1"
-                    onMouseEnter={() => userMenu.openNow()} // ← bez isLarge
-                    onMouseLeave={() => userMenu.closeNow(150)} // ← bez isLarge
+                    className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[200px] py-1"
+                    onMouseEnter={() => userMenu.openNow()}
+                    onMouseLeave={() => userMenu.closeNow(150)}
                   >
+                    {/* Admin/Organizer: przeniesione pozycje TYLKO tutaj */}
+                    {isAdminLike && (
+                      <>
+                        <Link
+                          to="/favorites"
+                          role="menuitem"
+                          className="px-4 py-2 hover:bg-gray-100 text-gray-700"
+                          onClick={() => userMenu.closeNow()}
+                        >
+                          Ulubione
+                        </Link>
+                        <Link
+                          to="/pending-accounts"
+                          role="menuitem"
+                          className="px-4 py-2 hover:bg-gray-100 text-gray-700"
+                          onClick={() => userMenu.closeNow()}
+                        >
+                          Konta oczekujące
+                        </Link>
+                        <div className="my-1 border-t border-gray-100" />
+                      </>
+                    )}
+
                     <Link
                       to={`/profile/${currentUser.id}`}
                       role="menuitem"
@@ -360,7 +466,7 @@ const Header = () => {
                     aria-label="Menu nawigacji"
                     className="absolute left-1/2 -translate-x-1/2 mt-1 bg-white border border-gray-200 rounded-md shadow-lg flex flex-col z-50 min-w-[160px] py-1"
                   >
-                    {navLinks.map((link) => (
+                    {navLinksMobile.map((link) => (
                       <NavLink
                         key={link.to}
                         to={link.to}

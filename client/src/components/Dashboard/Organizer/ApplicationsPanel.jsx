@@ -33,6 +33,7 @@ const getStatusIcon = (status) => {
 export default function ApplicationsPanel({
   selectedCasting,
   getCastingApplications,
+  fetchCastingApplications, // ⬅ nowy prop
 }) {
   const handleUpdateStatus = async (applicationId, newStatus) => {
     if (!selectedCasting) return;
@@ -41,7 +42,10 @@ export default function ApplicationsPanel({
         `/casting/casting/${applicationId}/status?castingId=${selectedCasting.id}&status=${newStatus}`,
         { method: "GET" }
       );
-      await getCastingApplications(selectedCasting.id);
+
+      // ⬇️ ważne: refetch z API, nie sam selector
+      await fetchCastingApplications?.(selectedCasting.id);
+
       alert(
         newStatus === "accepted"
           ? "Zgłoszenie zaakceptowane"

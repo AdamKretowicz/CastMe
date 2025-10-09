@@ -1,3 +1,4 @@
+// src/components/Casting/Model/ModelDashboard.jsx
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { apiFetch } from "../../../utils/api";
@@ -17,27 +18,12 @@ const sortByNewest = (arr) =>
 
 const normId = (v) => (v == null ? "" : String(v).toLowerCase());
 
-// „tolerancyjny” parser: wyciągnij castingId z odpowiedzi GET /casting/casting/participant/{userId}
-// Obsługujemy kilka możliwych kształtów: tablica obiektów { castingId } / { id } / { casting: { id } }
-// lub obiekt { castingIds: [...] }
-const extractCastingIdsForUser = (res) => {
-  if (!res) return [];
-  if (Array.isArray(res)) {
-    return res
-      .map((x) => x?.castingId ?? x?.id ?? x?.casting?.id)
-      .filter(Boolean)
-      .map(String);
-  }
-  if (Array.isArray(res?.items)) {
-    return res.items
-      .map((x) => x?.castingId ?? x?.id ?? x?.casting?.id)
-      .filter(Boolean)
-      .map(String);
-  }
-  if (Array.isArray(res?.castingIds)) {
-    return res.castingIds.filter(Boolean).map(String);
-  }
-  return [];
+// PL nazwy ról do UI (używane też w komunikacie „Casting nie przewiduje roli…”)
+const roleDisplayMap = {
+  Model: "Model",
+  Photographer: "Fotograf",
+  Designer: "Projektant",
+  Volunteer: "Wolontariusz",
 };
 
 export default function ModelDashboard() {
@@ -50,12 +36,12 @@ export default function ModelDashboard() {
   const [selectedCasting, setSelectedCasting] = useState(null);
   const [applicationMessage, setApplicationMessage] = useState("");
 
-  // „moje zgłoszenia” — surowe dane (dla ApplicationsList)
-  const [userApplications, setUserApplications] = useState([]);
-
-  // Zestaw castingów, do których user dołączył (dla szybkiego hasApplied)
-  const [userCastingIds, setUserCastingIds] = useState(new Set());
-  const [loadingUserCastingIds, setLoadingUserCastingIds] = useState(false);
+  // participations z /casting/casting/participations/{userId}
+  const [userParticipations, setUserParticipations] = useState([]);
+  const [participationsByCastingId, setParticipationsByCastingId] = useState(
+    new Map()
+  );
+  const [loadingParticipations, setLoadingParticipations] = useState(false);
 
   // bannery
   const { banners: castingBanners } = useCastingBanners(castings);
@@ -76,66 +62,78 @@ export default function ModelDashboard() {
     load();
   }, []);
 
-  // 2) Pobierz „moje zgłoszenia” po userId — KLUCZOWE
-  const refreshUserParticipations = async (userId) => {
+  // 2) Pobierz participations
+  const refreshParticipations = async (userId) => {
     if (!userId) return;
-    setLoadingUserCastingIds(true);
+    setLoadingParticipations(true);
     try {
-      const res = await apiFetch(`/casting/casting/participant/${userId}`, {
+      const res = await apiFetch(`/casting/casting/participations/${userId}`, {
         method: "GET",
       });
-      // a) zasil listę ApplicationsList (jeśli chcesz ją pokazywać)
-      setUserApplications(
-        Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : []
-      );
+      const list = Array.isArray(res) ? res : [];
+      setUserParticipations(list);
 
-      // b) ustaw Set castingId dla hasApplied
-      const ids = extractCastingIdsForUser(res);
-      setUserCastingIds(new Set(ids.map(normId)));
+      const map = new Map();
+      for (const row of list) {
+        if (!row?.castingId) continue;
+        map.set(normId(row.castingId), {
+          status: row.assignmentStatus, // "Pending" | "Active" | "Rejected"
+          role: row.role || "",
+          assignmentId: row.assignmentId || null,
+        });
+      }
+      setParticipationsByCastingId(map);
     } catch (e) {
-      // Jeśli 403/404 – zwykle znaczy brak dostępu/zgłoszeń; wtedy zostaw pusty set
-      console.warn("Nie udało się pobrać moich zgłoszeń:", e);
-      setUserApplications([]);
-      setUserCastingIds(new Set());
+      console.warn("Nie udało się pobrać moich zgłoszeń (participations):", e);
+      setUserParticipations([]);
+      setParticipationsByCastingId(new Map());
     } finally {
-      setLoadingUserCastingIds(false);
+      setLoadingParticipations(false);
     }
   };
 
   useEffect(() => {
     if (currentUser?.id) {
-      refreshUserParticipations(currentUser.id);
+      refreshParticipations(currentUser.id);
     }
   }, [currentUser?.id]);
 
-  const hasApplied = (castingId) => userCastingIds.has(normId(castingId));
+  const hasApplied = (castingId) =>
+    participationsByCastingId.has(normId(castingId));
+  const getApplied = (castingId) =>
+    participationsByCastingId.get(normId(castingId)) || null;
 
-  // 3) POST – dołącz do castingu: optymistycznie + odśwież „moje zgłoszenia”
+  // 3) POST – dołącz do castingu
   const handleApply = async (castingId) => {
     if (!currentUser?.id) {
       alert("Musisz być zalogowany, aby się zgłosić.");
       return;
     }
     if (hasApplied(castingId)) {
-      alert("Już dołączyłeś do tego castingu.");
       return;
     }
 
     try {
       await apiFetch(
         `/casting/casting/${castingId}/participant/${currentUser.id}`,
-        { method: "POST" }
+        {
+          method: "POST",
+        }
       );
 
-      // OPTYMISTYCZNIE: dopisz do setu, żeby UI od razu był poprawny
-      setUserCastingIds((prev) => {
-        const next = new Set(prev);
-        next.add(normId(castingId));
+      // optymistycznie pokaż Pending
+      setParticipationsByCastingId((prev) => {
+        const next = new Map(prev);
+        next.set(normId(castingId), {
+          status: "Pending",
+          role: "",
+          assignmentId: null,
+        });
         return next;
       });
 
-      // A-SYNC: dociągnij najnowszy stan z backendu
-      refreshUserParticipations(currentUser.id);
+      // dociągnij świeże dane
+      refreshParticipations(currentUser.id);
 
       setSelectedCasting(null);
       setApplicationMessage("");
@@ -143,16 +141,19 @@ export default function ModelDashboard() {
     } catch (err) {
       console.error("Błąd wysyłania zgłoszenia:", err);
 
-      // Jeśli backend zwróci 409/500 dla duplikatu — zaznacz mimo wszystko
       if (err?.status === 409 || err?.status === 500) {
-        setUserCastingIds((prev) => {
-          const next = new Set(prev);
-          next.add(normId(castingId));
+        setParticipationsByCastingId((prev) => {
+          const next = new Map(prev);
+          next.set(normId(castingId), {
+            status: "Pending",
+            role: "",
+            assignmentId: null,
+          });
           return next;
         });
         setSelectedCasting(null);
         setApplicationMessage("");
-        alert("Już jesteś uczestnikiem tego castingu.");
+        alert("Już jesteś zgłoszony do tego castingu.");
         return;
       }
 
@@ -166,11 +167,19 @@ export default function ModelDashboard() {
     }
   };
 
+  // pomocniczo wyciągamy rolę bieżącego usera (tylko do komunikatu; NIE blokujemy globalnie)
+  const currentUserRoleName =
+    currentUser?.role ||
+    currentUser?.roleName ||
+    currentUser?.userRole?.name ||
+    currentUser?.userRole ||
+    null;
+
   const header = useMemo(
     () => (
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-[#2B2628] mb-2">
-          Witaj, {currentUser?.firstName || "Modelu"}!
+          Witaj{currentUser?.firstName ? `, ${currentUser.firstName}` : ""}!
         </h1>
         <p className="text-gray-600">
           Zarządzaj swoimi zgłoszeniami i znajdź nowe okazje
@@ -203,7 +212,7 @@ export default function ModelDashboard() {
           {/* Moje zgłoszenia */}
           <div className="lg:col-span-1">
             <ApplicationsList
-              applications={userApplications}
+              applications={userParticipations}
               castings={castings}
             />
           </div>
@@ -221,29 +230,52 @@ export default function ModelDashboard() {
                   {castings.map((casting) => {
                     const isClosed =
                       casting.status && casting.status !== "Active";
-                    const isFull = casting.roles?.some(
-                      (r) => r.capacity && r.acceptedCount >= r.capacity
-                    );
                     const afterDeadline =
                       casting.eventDate &&
                       new Date(casting.eventDate) < new Date();
 
+                    const applied = getApplied(casting.id);
+                    const userHasApplied = !!applied;
+                    const appliedStatus = applied?.status || null;
+                    const appliedRole = applied?.role || null;
+
+                    // Czy casting przewiduje MOJĄ rolę? (komunikat informacyjny)
+                    const myRole = currentUserRoleName || "";
+                    const myRolePL = myRole
+                      ? roleDisplayMap[myRole] || myRole
+                      : "";
+                    const roleExists = Array.isArray(casting.roles)
+                      ? casting.roles.some(
+                          (r) =>
+                            String(r.role).toLowerCase() ===
+                            String(myRole).toLowerCase()
+                        )
+                      : false;
+
+                    const blockedReason =
+                      !userHasApplied && myRole && !roleExists
+                        ? `Casting nie przewiduje roli „${myRolePL}”.`
+                        : null;
+
+                    // Button jest wyłączony na zamknięte/po terminie/już zgłoszony/ładowanie
                     const disabledComputed =
                       isClosed ||
-                      isFull ||
                       afterDeadline ||
-                      hasApplied(casting.id);
+                      userHasApplied ||
+                      loadingParticipations;
 
                     return (
                       <CastingCard
                         key={casting.id}
                         casting={casting}
                         bannerUrl={castingBanners[casting.id]}
-                        hasApplied={hasApplied(casting.id)}
+                        hasApplied={userHasApplied}
+                        appliedStatus={appliedStatus}
+                        appliedRole={appliedRole}
                         disabled={disabledComputed}
+                        blockedReason={blockedReason} // ⬅ komunikat PL
                         onApply={() => {
-                          // nie otwieraj modala, jeśli jeszcze ładujemy lub jest disabled
-                          if (loadingUserCastingIds || disabledComputed) return;
+                          if (disabledComputed || blockedReason) return;
                           setSelectedCasting(casting);
                         }}
                       />
@@ -256,7 +288,7 @@ export default function ModelDashboard() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* MODAL APLIKACJI */}
       <Modal
         isOpen={!!selectedCasting}
         backdropImage={

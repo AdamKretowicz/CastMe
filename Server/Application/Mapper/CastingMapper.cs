@@ -1,4 +1,4 @@
-﻿using Application.Dtos;
+﻿﻿using Application.Dtos;
 using Application.Dtos.Photo;
 using CastMe.Domain.Entities;
 using Domain.Entities;
@@ -32,7 +32,7 @@ namespace Application.Mapper
             {
                 Role = r.Role,
                 Capacity = r.Capacity,
-                AcceptedCount = r.AcceptedCount
+                AcceptedCount = casting.Assignments.Count(a => a.UserAcceptanceStatus == CastingUserStatus.Active && a.Role.Name == r.Role.ToString())
             }).ToList(),
             Tags = casting.Tags.Select(t => t.Value).ToList(),
 
