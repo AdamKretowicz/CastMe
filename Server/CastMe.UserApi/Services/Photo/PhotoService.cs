@@ -5,20 +5,22 @@ using Infrastructure.Context;
 using Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using WebApi.Services.Photo;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 namespace CastMe.Api.Features.Photos
 {
     public class PhotoService : IPhotoService
     {
         private readonly UserDbContext _db;
-        private readonly IImageStorage _storage;
         private readonly IConfiguration _cfg;
+        private readonly BlobContainerClient _container;
 
-        public PhotoService(UserDbContext db, IImageStorage storage, IConfiguration cfg)
+        public PhotoService(UserDbContext db, IConfiguration cfg, BlobContainerClient container)
         {
             _db = db;
-            _storage = storage;
             _cfg = cfg;
+            _container = container;
         }
 
         public async Task<IReadOnlyList<PhotoDto>> GetUserPhotosAsync(Guid userId, CancellationToken ct = default)
@@ -58,20 +60,23 @@ namespace CastMe.Api.Features.Photos
             if (file.Length > maxMb * 1024L * 1024L)
                 throw new InvalidOperationException($"File too large. Max {maxMb} MB.");
 
+            await _container.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
             var ext = Path.GetExtension(file.FileName);
-            var relative = $"{userId}/{Guid.NewGuid():N}{ext}";
+            var blobName = $"{userId}/{Guid.NewGuid():N}{ext}";
+            var blobClient = _container.GetBlobClient(blobName);
 
             await using var stream = file.OpenReadStream();
-            await _storage.SaveAsync(relative, stream);
+            await blobClient.UploadAsync(stream, overwrite: true, cancellationToken: ct);
 
-            var url = _storage.GetPublicUrl(relative);
+            var url = blobClient.Uri.ToString();
             var maxOrder = await _db.Photos.Where(p => p.UserId == userId).MaxAsync(p => (int?)p.Order, ct) ?? -1;
 
             var entity = new Photo
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                FileName = relative,
+                FileName = blobName,
                 OriginalFileName = file.FileName,
                 ContentType = file.ContentType,
                 SizeBytes = file.Length,
@@ -95,7 +100,8 @@ namespace CastMe.Api.Features.Photos
             _db.Photos.Remove(entity);
             await _db.SaveChangesAsync(ct);
 
-            await _storage.DeleteAsync(entity.FileName);
+            var blobClient = _container.GetBlobClient(entity.FileName);
+            await blobClient.DeleteIfExistsAsync(cancellationToken: ct);
         }
 
         public async Task SetMainAsync(Guid userId, Guid photoId, CancellationToken ct = default)

@@ -1,6 +1,7 @@
 ﻿using Application.Dtos.Photo;
 using Application.Interfaces;
 using Application.Mapper;
+using Azure.Storage.Blobs;
 using CastMe.Domain.Entities;
 using Domain.Entities;
 using Infrastructure.Context;
@@ -12,14 +13,14 @@ namespace WebApi.Services.Photo
     public class CastingBannerService : ICastingBannerService
     {
         private readonly UserDbContext _db;
-        private readonly IImageStorage _storage;
         private readonly IConfiguration _cfg;
+        private readonly BlobContainerClient _container;
 
-        public CastingBannerService(UserDbContext db, IImageStorage storage, IConfiguration cfg)
+        public CastingBannerService(UserDbContext db, IConfiguration cfg, BlobContainerClient container)
         {
             _db = db;
-            _storage = storage;
             _cfg = cfg;
+            _container = container;
         }
 
         public async Task DeleteBannerAsync(Guid castingId, CancellationToken ct = default)
@@ -30,7 +31,8 @@ namespace WebApi.Services.Photo
             _db.CastingBanners.Remove(entity);
             await _db.SaveChangesAsync(ct);
 
-            await _storage.DeleteAsync(entity.FileName);
+            var blobClient = _container.GetBlobClient(entity.FileName);
+            await blobClient.DeleteIfExistsAsync(cancellationToken: ct);
         }
 
         public async Task<CastingBannerDto> GetBannerAsync(Guid castingId, CancellationToken ct = default)
@@ -74,19 +76,21 @@ namespace WebApi.Services.Photo
                 DeleteBannerAsync(castingId, ct).GetAwaiter().GetResult();
 
             var ext = Path.GetExtension(file.FileName);
-            var relative = $"CastingBanners/{castingId}/{Guid.NewGuid():N}{ext}";
+            var blobName = $"CastingBanners/{castingId}/{Guid.NewGuid():N}{ext}";
+            var blobClient = _container.GetBlobClient(blobName);
 
             await using var stream = file.OpenReadStream();
 
-            await _storage.SaveAsync(relative, stream);
+            await blobClient.UploadAsync(stream, overwrite: true, cancellationToken: ct);
 
-            var url = _storage.GetPublicUrl(relative);
+
+            var url = blobClient.Uri.ToString();
 
             var entity = new CastingBanner
             {
                 Id = Guid.NewGuid(),
                 CastingId = castingId,
-                FileName = relative,
+                FileName = blobName,
                 OriginalFileName = file.FileName,
                 ContentType = file.ContentType,
                 SizeBytes = file.Length,

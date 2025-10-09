@@ -15,12 +15,12 @@ namespace WebApi.Services
 
         public async Task<IEnumerable<Domain.Entities.Casting>> GetAllCastings() =>
             await _context.Castings
-                .Include(c => c.Roles)
-                .Include(c => c.Tags)
-                .Include(c => c.Assignments)
-                    .ThenInclude(a => a.Role)
-                .AsNoTracking()
-                .ToListAsync();
+            .Include(c => c.Roles)
+            .Include(c => c.Tags)
+            .Include(c => c.Assignments)
+            .ThenInclude(a => a.Role)
+            .AsNoTracking()
+            .ToListAsync();
 
         public async Task<Domain.Entities.Casting?> GetById(Guid id) =>
             await _context.Castings
@@ -44,6 +44,9 @@ namespace WebApi.Services
                 throw new Exception("Casting not found");
 
             casting.UpdateEntity(dto);
+
+
+            //_context.Castings.Update(entity);
             await _context.SaveChangesAsync();
         }
 
@@ -156,7 +159,7 @@ namespace WebApi.Services
             var assignments = await _context.Assignments
                 .AsNoTracking()
                 .Include(u => u.User)
-                    .ThenInclude(u => u.Photos)
+                .ThenInclude(u => u.Photos)
                 .Include(r => r.Role)
                 .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == CastingUserStatus.Pending)
                 .ToListAsync();
@@ -166,20 +169,23 @@ namespace WebApi.Services
 
         public async Task<IEnumerable<CastingAssignment>> GetCastingAllUsersByCastingId(Guid castingId)
         {
-            var assignments = await _context.Assignments
-                .AsNoTracking()
+
+            var assigments = await _context.Assignments
                 .Include(u => u.User)
-                    .ThenInclude(u => u.Photos)
+                .ThenInclude(u => u.Photos)
                 .Include(r => r.Role)
                 .Where(a => a.CastingId == castingId)
-                .ToListAsync();
+                .ToListAsync()
+                ?? throw new KeyNotFoundException("Casting not found");
 
-            return assignments;
+            return assigments;
+
+
         }
+
 
         public async Task<CastingAssignment> ChangeUserCastingStatus(Guid assignmentId, CastingUserStatus status)
         {
-            // Załaduj assignment + Casting.Roles + Role do walidacji limitu
             var assignment = await _context.Assignments
                 .Include(a => a.Role)
                 .Include(a => a.Casting)
@@ -225,7 +231,18 @@ namespace WebApi.Services
                 .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == status)
                 .ToListAsync();
 
-            return assignments;
+        public async Task<IEnumerable<CastingAssignment>> GetCastingUsersByStatus(Guid castingId, CastingUserStatus status)
+        {
+            var assigments = await _context.Assignments
+                .Include(u => u.User)
+                .ThenInclude(u => u.Photos)
+                .Include(r => r.Role)
+                .Where(a => a.CastingId == castingId && a.UserAcceptanceStatus == status)
+                .ToListAsync()
+                ?? throw new KeyNotFoundException("Casting not found");
+            return assigments;
+
+
         }
     }
 }

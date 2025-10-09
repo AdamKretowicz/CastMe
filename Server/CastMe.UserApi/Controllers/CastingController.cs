@@ -255,8 +255,11 @@ namespace WebApi.Controllers
                 return NotFound(new { message = ex.Message });
             }
         }
-
-        /// <summary>Get casting banner by casting Id.</summary>
+        /// <summary>
+        /// Get casting banner by casting Id.
+        /// </summary>
+        /// <param name="castingId"></param>
+        /// <returns></returns>
         [HttpGet(Endpoints.CastingEndpoints.GetCastingBanner)]
         [ProducesResponseType(typeof(CastingBannerDto), 200)]
         [ProducesResponseType(404)]
@@ -279,7 +282,12 @@ namespace WebApi.Controllers
             }
         }
 
-        /// <summary>Upload casting banner by casting Id.</summary>
+        /// <summary>
+        /// Upload casting banner by casting Id.
+        /// </summary>
+        /// <param name="castingId"></param>
+        /// <param name="form"></param>
+        /// <returns></returns>
         [HttpPost(Endpoints.CastingEndpoints.UploadCastingBanner)]
         [ProducesResponseType(typeof(CastingBannerDto), 201)]
         [ProducesResponseType(400)]
@@ -303,7 +311,11 @@ namespace WebApi.Controllers
             }
         }
 
-        /// <summary>Delete casting banner by casting Id.</summary>
+        /// <summary>
+        /// Delete casting banner by casting Id.
+        /// </summary>
+        /// <param name="castingId"></param>
+        /// <returns></returns>
         [HttpDelete(Endpoints.CastingEndpoints.DeleteCastingBanner)]
         [ProducesResponseType(204)]
         [ProducesResponseType(404)]
@@ -322,7 +334,11 @@ namespace WebApi.Controllers
             }
         }
 
-        /// <summary>Get pending users by casting Id.</summary>
+        /// <summary>
+        /// Get pending users by casting Id.
+        /// </summary>
+        /// <param name="castingId"></param>
+        /// <returns></returns>
         [HttpGet(Endpoints.CastingEndpoints.GetPendingUsersByCastingId)]
         [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
         [ProducesResponseType(404)]
@@ -352,7 +368,11 @@ namespace WebApi.Controllers
             }
         }
 
-        /// <summary>Get all users by casting Id.</summary>
+        /// <summary>
+        /// Get all users by casting Id.
+        /// </summary>
+        /// <param name="castingId"></param>
+        /// <returns></returns>
         [HttpGet(Endpoints.CastingEndpoints.GetAllUsersByCastingId)]
         [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
         [ProducesResponseType(404)]
@@ -390,21 +410,24 @@ namespace WebApi.Controllers
                     {
                         AssignmentId = a.Id,
                         AssignmentStatus = a.UserAcceptanceStatus.ToString(),
-                        Role = a.Role.Name, // ⬅ rola przypisana w tym castingu
                         User = a.User.ToReadDto()
-                    })
+                    }
+                    )
                 });
             }
             catch (KeyNotFoundException ex)
             {
-                _logger.LogWarning(ex, "Failed to get all users. {Message}", ex.Message);
+                _logger.LogWarning(ex, "Failed to get pending users. {Message}", ex.Message);
                 return NotFound(new { message = ex.Message });
             }
         }
 
         /// <summary>
-        /// Change user casting assignment status. Allowed: Pending, Active, Rejected
+        /// Change user casting assignment status.
         /// </summary>
+        /// <param name="assigmentId"></param>
+        /// <param name="AssignmentStatus"></param>
+        /// <returns></returns>
         [HttpPost(Endpoints.CastingEndpoints.ChangeUserAssignmentStatus)]
         [ProducesResponseType(204)]
         [ProducesResponseType(400)]
@@ -415,11 +438,11 @@ namespace WebApi.Controllers
         {
             try
             {
-                if (!Enum.TryParse<CastingUserStatus>(AssignmentStatus, true, out var parsedAssignmentStatus))
+                CastingUserStatus parsedAssignmentStatus;
+                if (!Enum.TryParse<CastingUserStatus>(AssignmentStatus, true, out parsedAssignmentStatus))
                 {
                     return BadRequest(new { message = "Invalid status value. Allowed values are: Pending, Active, Rejected." });
                 }
-
                 await _castingService.ChangeUserCastingStatus(assigmentId, parsedAssignmentStatus);
                 return NoContent();
             }
@@ -464,6 +487,38 @@ namespace WebApi.Controllers
                 _logger.LogWarning(ex, "Failed to get active users. {Message}", ex.Message);
                 return NotFound(new { message = ex.Message });
             }
+        }
+
+        [HttpGet(Endpoints.CastingEndpoints.GettActiveUsersByCastingId)]
+        [ProducesResponseType(typeof(IEnumerable<UserDto.Read>), 200)]
+        [ProducesResponseType(404)]
+        [RoleAuthorize("Admin")]
+        public async Task<IActionResult> GetActiveUsersByCastingId([FromRoute] Guid castingId)
+        {
+            try
+            {
+                var assignments = await _castingService.GetCastingUsersByStatus(castingId, CastingUserStatus.Active);
+                if (assignments == null || !assignments.Any())
+                {
+                    string[] result = [];
+                    return Ok(result);
+                }
+                return Ok(assignments.Select(a => new
+                {
+                    AssignmentId = a.Id,
+                    AssignmentStatus = a.UserAcceptanceStatus.ToString(),
+                    User = a.User.ToReadDto()
+                }));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Failed to get active users. {Message}", ex.Message);
+                return NotFound(new { message = ex.Message });
+            }
+
+
+
+
         }
     }
 }

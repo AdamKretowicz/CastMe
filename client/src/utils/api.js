@@ -4,19 +4,21 @@ const API_BASE_URL = API_URL; // Adjust if different
 
 //Retrive photo url
 
-export const getPhotoUrl = (maybeRelative) => {
-  if (!maybeRelative) return null;
+export const getPhotoUrl = (url) => {
+  if (!url) return null;
 
-  // 1) już absolutny? zwróć
-  if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
+  // If it's already a full URL (starts with http or https), return as-is
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
 
-  // 2) baza z env (bez końcowego '/')
-  const base = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
-  const path = `${maybeRelative}`.startsWith("/")
-    ? maybeRelative
-    : `/${maybeRelative}`;
+  // Otherwise, treat it as a relative URL and prepend backend origin
+  const backendOrigin = import.meta.env.VITE_API_URL || '';
+  
+  // Ensure there's no double slash
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
 
-  return `${base}${path}`;
+  return `${backendOrigin}${cleanUrl}`;
 };
 
 // Get token from localStorage
@@ -547,17 +549,14 @@ export const updatePhotoStatus = async (photosToUpdate, token) => {
     photoStatus: photo.photoStatus, // or photoStatus directly
   }));
 
-  const response = await fetch(
-    "https://localhost:7080/api/users/photos/updateStatus",
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json-patch+json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/api/users/photos/updateStatus`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json-patch+json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
 
   if (!response.ok) {
     throw new Error("Failed to update photo status");
@@ -565,3 +564,25 @@ export const updatePhotoStatus = async (photosToUpdate, token) => {
 
   return true;
 };
+
+export async function sendEmail(data) {
+  try {
+    const response = await fetch("/email/email/form", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Nie udało się wysłać wiadomości");
+    }
+
+    return await response.json();
+  } catch (error) {
+    throw new Error(error.message);
+  }
+}
+
