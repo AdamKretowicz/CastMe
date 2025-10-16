@@ -1,4 +1,4 @@
-// src/pages/EditProfilePage.jsx
+// src/pages/EditProfilePage.jsx — zapis z refetchem + overlay + navigate(state:{profileUpdated:true})
 
 import React, { useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -45,6 +45,7 @@ export default function EditProfilePage() {
   const navigate = useNavigate();
   const { accessToken, currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
+  const todayStr = new Date().toISOString().split("T")[0];
 
   // Profile form data
   const [formData, setFormData] = useState({
@@ -173,6 +174,9 @@ export default function EditProfilePage() {
     setSaving(true);
     setError(null);
 
+    const MIN_SAVE_MS = 1500; // 1.5 s
+    const startedAt = Date.now();
+
     try {
       const submitData = {
         ...formData,
@@ -183,11 +187,28 @@ export default function EditProfilePage() {
         weight: Number(formData.weight),
       };
 
+      // 1) Aktualizacja profilu
       await updateUserProfile(currentUser.id, submitData, accessToken);
-      setSuccess(true);
-      setTimeout(() => {
-        navigate(`/profile/${currentUser.id}`);
-      }, 1500);
+
+      // 2) Szybki refetch (opcjonalnie, ale zostawiamy jak było)
+      try {
+        await fetchUserProfile(currentUser.id, accessToken);
+      } catch {
+        /* ignorujemy błąd refetcha */
+      }
+
+      // 3) Zapewnij co najmniej 1.5 s „trwania” operacji (ładny UX)
+      const elapsed = Date.now() - startedAt;
+      const remaining = MIN_SAVE_MS - elapsed;
+      if (remaining > 0) {
+        await new Promise((r) => setTimeout(r, remaining));
+      }
+
+      // 4) Nawigacja z flagą do toasta
+      navigate(`/profile/${currentUser.id}`, {
+        state: { profileUpdated: true },
+        replace: true,
+      });
     } catch (err) {
       setError(err.message || "Błąd aktualizacji profilu");
     } finally {
@@ -286,6 +307,7 @@ export default function EditProfilePage() {
       startDate: "",
       endDate: "",
       link: "",
+      stillWorking: false,
     });
     setEditingExperience(null);
     setShowExperienceForm(true);
@@ -303,6 +325,7 @@ export default function EditProfilePage() {
         ? new Date(experience.endDate).toISOString().split("T")[0]
         : "",
       link: experience.link || "",
+      stillWorking: !experience.endDate, // jeśli brak endDate, traktujemy jako „wciąż pracuję”
     });
     setEditingExperience(experience);
     setShowExperienceForm(true);
@@ -310,7 +333,6 @@ export default function EditProfilePage() {
 
   const handleSaveExperience = async () => {
     try {
-      // Build submit data
       const submitData = {
         projectName: experienceForm.projectName,
         role: experienceForm.role,
@@ -318,7 +340,6 @@ export default function EditProfilePage() {
         startDate: experienceForm.startDate
           ? new Date(experienceForm.startDate).toISOString()
           : null,
-        // Only include endDate if not still working
         ...(experienceForm.stillWorking
           ? {}
           : {
@@ -326,7 +347,6 @@ export default function EditProfilePage() {
                 ? new Date(experienceForm.endDate).toISOString()
                 : null,
             }),
-        // Only include link if not empty
         ...(experienceForm.link ? { link: experienceForm.link } : {}),
       };
 
@@ -375,17 +395,29 @@ export default function EditProfilePage() {
 
   return (
     <div className="bg-white text-[#2b2628] min-h-screen p-4 md:p-10">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto relative">
+        {/* OVERLAY pod czas zapisu */}
+        {saving && (
+          <div className="absolute inset-0 z-20 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <span className="inline-block h-8 w-8 rounded-full border-4 border-[#EA1A62] border-t-transparent animate-spin" />
+              <span className="text-[#2b2628] font-medium">
+                Zapisywanie profilu…
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={() => navigate(`/profile/${currentUser.id}`)}
-            className="flex items-center text-[#EA1A62] hover:text-[#c91653] transition-colors"
+            className="flex items-center text-[#EA1A62] hover:text-[#c91653] transition-colors hover:cursor-pointer"
           >
             <ArrowLeft size={24} className="mr-2" />
             Wróć do profilu
           </button>
-          <h1 className="text-3xl font-bold">Edytuj profil</h1>
+          <h1 className="text-3xl font-bold ">Edytuj profil</h1>
           <div></div>
         </div>
 
@@ -397,7 +429,7 @@ export default function EditProfilePage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
+                className={`flex items-center px-6 py-3 font-medium text-sm border-b-2 transition-colors hover:cursor-pointer ${
                   activeTab === tab.id
                     ? "border-[#EA1A62] text-[#EA1A62]"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -426,9 +458,12 @@ export default function EditProfilePage() {
         {activeTab === "profile" && (
           <form onSubmit={handleSubmit}>
             {/* Podstawowe informacje */}
-            <Card className="p-6 mb-6">
+            <Card className="p-6 mb-6 ">
               <h2 className="text-2xl font-semibold mb-6">
-                <User size={24} className="inline mr-2 text-[#EA1A62]" />
+                <User
+                  size={24}
+                  className="inline mr-2 text-[#EA1A62] hover:cursor-pointer"
+                />
                 Podstawowe informacje
               </h2>
 
@@ -439,7 +474,7 @@ export default function EditProfilePage() {
                   onChange={(e) =>
                     handleInputChange("userName", e.target.value)
                   }
-                  required
+                  disabled
                 />
                 <Input
                   label="E-mail"
@@ -476,6 +511,7 @@ export default function EditProfilePage() {
                   onChange={(e) =>
                     handleInputChange("dateOfBirth", e.target.value)
                   }
+                  max={todayStr}
                 />
               </div>
             </Card>
@@ -863,7 +899,7 @@ export default function EditProfilePage() {
                   .filter(
                     (exp) =>
                       !editingExperience || exp.id !== editingExperience.id
-                  ) // hide the one being edited
+                  )
                   .map((exp) => (
                     <Card key={exp.id} className="p-6">
                       <div className="flex justify-between items-start">
@@ -898,14 +934,14 @@ export default function EditProfilePage() {
                         <div className="flex gap-2 ml-4">
                           <button
                             onClick={() => handleEditExperience(exp)}
-                            className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors"
+                            className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors hover:cursor-pointer"
                             title="Edytuj"
                           >
                             <Edit3 size={16} />
                           </button>
                           <button
                             onClick={() => setExperienceToDelete(exp)}
-                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors hover:cursor-pointer"
                             title="Usuń"
                           >
                             <Trash2 size={16} />

@@ -18,36 +18,42 @@ import FavoritesPage from "./Pages/FavoritesPage";
 import ProfileFilterPage from "./Pages/ProfileFilterPage";
 import StatusUpdatePage from "./Pages/StatusUpdatePage";
 import ContactPage from "./Pages/ContactPage.jsx";
+import { ToastProvider } from "./context/ToastProvider.jsx";
 
 function App() {
   return (
     <AuthProvider>
       <CastingProvider>
         <FilterProvider>
-          <Router>
-            <div className="min-h-screen flex flex-col">
-              <Header />
-              <main className="flex-grow">
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/profile/:userId" element={<ProfilePage />} />
-                  <Route path="/about" element={<AboutPage />} />
-                  <Route path="/edit-profile" element={<EditProfilePage />} />
-                  <Route path="/favorites" element={<FavoritesPage />} />
-                  <Route path="/filterUsers" element={<ProfileFilterPage />} />
-                  <Route
-                    path="/pending-accounts"
-                    element={<StatusUpdatePage />}
-                  />
-                  <Route path="/contact" element={<ContactPage />} />
-                </Routes>
-              </main>
-              <Footer />
-            </div>
-          </Router>
+          <ToastProvider>
+            <Router>
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-grow">
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/profile/:userId" element={<ProfilePage />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/edit-profile" element={<EditProfilePage />} />
+                    <Route path="/favorites" element={<FavoritesPage />} />
+                    <Route
+                      path="/filterUsers"
+                      element={<ProfileFilterPage />}
+                    />
+                    <Route
+                      path="/pending-accounts"
+                      element={<StatusUpdatePage />}
+                    />
+                    <Route path="/contact" element={<ContactPage />} />
+                  </Routes>
+                </main>
+                <Footer />
+              </div>
+            </Router>
+          </ToastProvider>
         </FilterProvider>
       </CastingProvider>
     </AuthProvider>

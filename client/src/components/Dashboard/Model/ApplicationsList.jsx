@@ -41,6 +41,31 @@ const roleDisplayMap = {
   Volunteer: "Wolontariusz",
 };
 
+// format „data + godzina” po polsku, w strefie PL
+const parseApiDate = (val) => {
+  if (!val) return null;
+  if (
+    typeof val === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val)
+  ) {
+    return new Date(val + "Z");
+  }
+  return new Date(val);
+};
+
+const formatDateTime = (iso) => {
+  if (!iso) return "—";
+  const d = parseApiDate(iso);
+  return d.toLocaleString("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function ApplicationsList({ applications, castings }) {
   // applications: [{ castingId, assignmentId, assignmentStatus, role, title?, eventDate?, location? }]
   const rows = Array.isArray(aplicationsFix(applications)) ? applications : [];
@@ -75,6 +100,7 @@ export default function ApplicationsList({ applications, castings }) {
                 row.eventDate ||
                 castings?.find((c) => c.id === row.castingId)?.eventDate ||
                 null;
+
               return (
                 <div
                   key={row.assignmentId || row.castingId}
@@ -91,9 +117,7 @@ export default function ApplicationsList({ applications, castings }) {
                       </span>
                       <span className="inline-flex items-center">
                         <Calendar className="w-4 h-4 mr-1" />
-                        {eventDate
-                          ? new Date(eventDate).toLocaleDateString("pl-PL")
-                          : "—"}
+                        {formatDateTime(eventDate)}
                       </span>
                       {row.role ? (
                         <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-700">

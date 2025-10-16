@@ -212,7 +212,7 @@ const Header = () => {
     navigate("/");
   };
 
-  // === NAV LINKS (bez pozycji adminowych; są tylko w menu użytkownika) ===
+  // === NAV LINKS ===
   const guestLinks = [
     { to: "/", label: "Home", icon: <Home className="w-4 h-4" /> },
     { to: "/about", label: "O nas", icon: <Info className="w-4 h-4" /> },
@@ -224,6 +224,7 @@ const Header = () => {
     },
   ];
 
+  // DLA ZALOGOWANYCH: usunięte „Castingi” i „Kontakt”
   const authedBaseLinks = [
     {
       to: "/dashboard",
@@ -235,19 +236,13 @@ const Header = () => {
       label: "Użytkownicy",
       icon: <Users className="w-5 h-5" />,
     },
-    {
-      to: "/castings",
-      label: "Castingi",
-      icon: <Camera className="w-5 h-5" />,
-    },
-    { to: "/contact", label: "Kontakt", icon: <Mail className="w-4 h-4" /> },
   ];
 
   // Desktop i Mobile „Więcej” korzystają z tych samych linków bazowych (bez adminowych)
   const navLinksDesktop = currentUser ? authedBaseLinks : guestLinks;
   const navLinksMobile = currentUser ? authedBaseLinks : guestLinks;
 
-  // === Przyciski logowania/rejestracji (styl jak u Ciebie) ===
+  // === Przyciski logowania/rejestracji ===
   const activeBtn =
     "inline-flex items-center justify-center rounded-lg bg-[#EA1A62] text-white transition-colors px-3 py-1 text-sm sm:px-4 sm:py-2 sm:text-base hover:bg-[#d1185a]";
   const inactiveBtn =
@@ -261,7 +256,7 @@ const Header = () => {
     toInitials(profile?.firstName, profile?.lastName) ||
     (currentUser?.email ? currentUser.email[0]?.toUpperCase() : "");
 
-  // Link logo jak w masterze: dla zalogowanego -> /dashboard, dla gościa -> /
+  // Link logo: zalogowany -> /dashboard, gość -> /
   const logoLink = currentUser ? "/dashboard" : "/";
 
   return (
@@ -356,7 +351,7 @@ const Header = () => {
                   title="Otwórz menu użytkownika"
                 >
                   {/* Avatar bez ringów */}
-                  <span className="inline-flex w-9 h-9 rounded-full overflow-hidden bg-gray-200 items-center justify-center">
+                  <span className="inline-flex w-9 h-9 rounded-full overflow-hidden bg-gray-200 items-center justify-center hover:cursor-pointer">
                     {avatarUrl ? (
                       <img
                         src={avatarUrl}
@@ -418,7 +413,7 @@ const Header = () => {
                     <button
                       role="menuitem"
                       onClick={handleLogout}
-                      className="px-4 py-2 hover:bg-gray-100 text-gray-700 text-left"
+                      className="px-4 py-2 hover:bg-gray-100 text-gray-700 text-left hover:cursor-pointer"
                     >
                       Wyloguj
                     </button>

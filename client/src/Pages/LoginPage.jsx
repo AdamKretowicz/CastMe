@@ -1,20 +1,71 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Input from "../components/UI/Input";
 import Button from "../components/UI/Button";
 import Card from "../components/UI/Card";
 
-const LoginPage = () => {
-  const [formData, setFormData] = useState({
-    email: "alex.johnson@email.com",
-    password: "password123",
-  });
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
+import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 
+const EMAIL_MAX = 100;
+const PASSWORD_MIN = 8;
+const PASSWORD_MAX = 64;
+
+// username – 3–32 znaki, litery/cyfry/._-
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 32;
+
+const codePointsLen = (s = "") => [...s].length;
+
+// proste sprawdzenie emaila
+const emailRegex = /^\S+@\S+\.\S+$/;
+// nazwa użytkownika (alnum oraz . _ -) + długość
+const usernameRegex = new RegExp(
+  `^[a-zA-Z0-9._-]{${USERNAME_MIN},${USERNAME_MAX}}$`
+);
+
+// ✅ UŻYWAMY .trim() ZAMIAST .transform(...)
+const schema = z.object({
+  identifier: z
+    .string({ required_error: "Email lub nazwa użytkownika jest wymagana" })
+    .trim()
+    .min(1, "Email lub nazwa użytkownika jest wymagana")
+    .max(EMAIL_MAX, `Wartość nie może być dłuższa niż ${EMAIL_MAX} znaków`)
+    .refine(
+      (v) => emailRegex.test(v) || usernameRegex.test(v),
+      "Podaj poprawny email lub nazwę użytkownika"
+    ),
+  password: z
+    .string({ required_error: "Hasło jest wymagane" })
+    .refine(
+      (v) => codePointsLen(v) >= PASSWORD_MIN,
+      `Hasło musi mieć minimum ${PASSWORD_MIN} znaków`
+    )
+    .refine(
+      (v) => codePointsLen(v) <= PASSWORD_MAX,
+      `Hasło nie może być dłuższe niż ${PASSWORD_MAX} znaków`
+    ),
+});
+
+const LoginPage = () => {
   const { currentUser, login } = useAuth();
   const navigate = useNavigate();
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm({
+    resolver: zodResolver(schema),
+    mode: "onBlur",
+    defaultValues: {
+      identifier: "alex.johnson@email.com",
+      password: "password123",
+    },
+  });
 
   useEffect(() => {
     if (currentUser) {
@@ -22,69 +73,31 @@ const LoginPage = () => {
     }
   }, [currentUser, navigate]);
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.email) {
-      newErrors.email = "Email jest wymagany";
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Nieprawidłowy format email";
-    } else if (formData.email.length > 100) {
-      newErrors.email = "Email nie może być dłuższy niż 100 znaków";
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Hasło jest wymagane";
-    } else if (formData.password.length < 8) {
-      newErrors.password = "Hasło musi mieć minimum 8 znaków";
-    } else if (formData.password.length > 64) {
-      newErrors.password = "Hasło nie może być dłuższe niż 64 znaki";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-
+  const onSubmit = async (data) => {
     try {
-      const result = await login(formData.email, formData.password);
+      // Backend powinien akceptować email LUB username w pierwszym parametrze
+      const result = await login(data.identifier, data.password);
 
-      if (!result.success) {
-        setErrors({ form: result.error || "Błąd logowania" });
-      } else {
-        navigate("/profile");
+      if (!result?.success) {
+        setError("root", {
+          type: "server",
+          message: result?.error || "Błąd logowania",
+        });
+        return;
       }
-    } catch (error) {
-      setErrors({ form: "Wystąpił błąd podczas logowania" });
-      console.error(error);
-    } finally {
-      setIsLoading(false);
+
+      navigate("/profile");
+    } catch (e) {
+      console.error(e);
+      setError("root", {
+        type: "server",
+        message: "Wystąpił błąd podczas logowania",
+      });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="h-[100dvh] bg-gray-50 grid place-items-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[#2B2628] mb-2">
@@ -95,42 +108,62 @@ const LoginPage = () => {
 
         <Card>
           <Card.Content>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {errors.form && (
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="space-y-6"
+              noValidate
+            >
+              {errors.root?.message && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  {errors.form}
+                  {errors.root.message}
                 </div>
               )}
 
-              <Input
-                label="Adres email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                error={errors.email}
-                required
-                placeholder="twoj@email.com"
+              <Controller
+                name="identifier"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    label="Email lub nazwa użytkownika"
+                    name="identifier"
+                    type="text"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    error={errors.identifier?.message}
+                    required
+                    autoComplete="username"
+                    placeholder="np. jan.kowalski lub jan.kowalski@example.com"
+                  />
+                )}
               />
 
-              <Input
-                label="Hasło"
+              <Controller
                 name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-                required
-                placeholder="••••••••"
+                control={control}
+                render={({ field }) => (
+                  <Input
+                    label="Hasło"
+                    name="password"
+                    type="password"
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    error={errors.password?.message}
+                    required
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                  />
+                )}
               />
 
               <Button
                 type="submit"
                 className="w-full"
                 size="lg"
-                disabled={isLoading}
+                disabled={isSubmitting}
               >
-                {isLoading ? "Logowanie..." : "Zaloguj się"}
+                {isSubmitting ? "Logowanie..." : "Zaloguj się"}
               </Button>
             </form>
 
@@ -147,21 +180,6 @@ const LoginPage = () => {
             </div>
           </Card.Content>
         </Card>
-
-        {/* Demo accounts info */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-medium text-blue-900 mb-2">
-            Konta demonstracyjne:
-          </h3>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p>
-              <strong>Model:</strong> anna.kowalska@email.com / password123
-            </p>
-            <p>
-              <strong>Organizator:</strong> organizer@test.com / password123
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );

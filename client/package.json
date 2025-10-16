@@ -11,12 +11,14 @@
     "server": "json-server --watch db.json --port 7080"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
     "@tailwindcss/vite": "^4.1.12",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-dropzone": "^14.3.8",
     "react-router-dom": "^7.8.2",
-    "tailwindcss": "^4.1.12"
+    "tailwindcss": "^4.1.12",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

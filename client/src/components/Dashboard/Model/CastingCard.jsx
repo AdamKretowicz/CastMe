@@ -10,6 +10,32 @@ const roleDisplayMap = {
   Volunteer: "Wolontariusz",
 };
 
+// parser: jeśli backend zwróci ISO bez strefy (YYYY-MM-DDTHH:mm:ss), potraktuj jako UTC
+const parseApiDate = (val) => {
+  if (!val) return null;
+  if (
+    typeof val === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val)
+  ) {
+    return new Date(val + "Z");
+  }
+  return new Date(val);
+};
+
+// format daty+godziny w PL (Warszawa)
+const formatDateTime = (iso) => {
+  if (!iso) return "—";
+  const d = parseApiDate(iso);
+  return d.toLocaleString("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 function StatusBadge({ status }) {
   if (!status) return null;
   const s = String(status).toLowerCase();
@@ -36,9 +62,16 @@ export default function CastingCard({
   appliedStatus, // "Pending" | "Active" | "Rejected" | null
   appliedRole, // "Model" | "Photographer" | ...
   disabled, // ogólne wyłączenie (np. po terminie)
-  blockedReason, // NOWE: string – gdy nie możesz dołączyć z powodu roli
+  blockedReason, // string – gdy nie możesz dołączyć z powodu roli
   onApply,
 }) {
+  const eventDateTime = formatDateTime(casting.eventDate);
+  const createdAtDate = casting.createdAt
+    ? parseApiDate(casting.createdAt).toLocaleDateString("pl-PL", {
+        timeZone: "Europe/Warsaw",
+      })
+    : "—";
+
   return (
     <div className="border rounded-lg p-4">
       <div className="w-full mb-3">
@@ -53,18 +86,25 @@ export default function CastingCard({
         )}
       </div>
 
-      <h3 className="font-medium text-gray-900 mb-2">{casting.title}</h3>
+      <h3 className="font-medium text-gray-900 mb-1 break-words">
+        {casting.title}
+      </h3>
 
-      <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-2">
-        <div className="flex items-center">
-          <MapPin className="w-4 h-4 mr-1" />
+      {/* PEŁNY opis z łamaniem długich słów i zachowaniem nowych linii */}
+      {casting.description && (
+        <p className="text-sm text-gray-700 mb-3 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
+          {casting.description}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+        <div className="flex items-center min-w-0 break-words">
+          <MapPin className="w-4 h-4 mr-1 shrink-0" />
           {casting.location}
         </div>
         <div className="flex items-center">
           <Calendar className="w-4 h-4 mr-1" />
-          {casting.eventDate
-            ? new Date(casting.eventDate).toLocaleDateString("pl-PL")
-            : "-"}
+          {eventDateTime}
         </div>
       </div>
 
@@ -87,14 +127,8 @@ export default function CastingCard({
       </div>
 
       <div className="flex items-center justify-between">
-        <div className="text-xs text-gray-500">
-          Utworzono:{" "}
-          {casting.createdAt
-            ? new Date(casting.createdAt).toLocaleDateString("pl-PL")
-            : "-"}
-        </div>
+        <div className="text-xs text-gray-500">Utworzono: {createdAtDate}</div>
 
-        {/* prawa kolumna: status / komunikat / przycisk */}
         <div className="flex items-center gap-2">
           {hasApplied ? (
             <>

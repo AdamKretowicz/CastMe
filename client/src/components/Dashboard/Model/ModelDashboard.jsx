@@ -8,13 +8,28 @@ import ApplicationsList from "./ApplicationsList";
 import CastingCard from "./CastingCard";
 import Modal from "../../UI/Modal";
 import { useCastingBanners } from "../../../hooks/useCastingBanners";
+import { useToast } from "../../../context/ToastProvider";
 
-const sortByNewest = (arr) =>
-  [...arr].sort((a, b) => {
-    const ad = new Date(a?.createdAt || a?.eventDate || 0).getTime();
-    const bd = new Date(b?.createdAt || b?.eventDate || 0).getTime();
-    return bd - ad;
+const sortByEventDate = (arr) => {
+  const now = Date.now();
+  return [...arr].sort((a, b) => {
+    const ta = new Date(a?.eventDate || 0).getTime();
+    const tb = new Date(b?.eventDate || 0).getTime();
+
+    const aFuture = ta >= now;
+    const bFuture = tb >= now;
+
+    // najpierw przyszłe
+    if (aFuture && !bFuture) return -1;
+    if (!aFuture && bFuture) return 1;
+
+    // wśród przyszłych: najbliższe -> najdalsze (rosnąco)
+    if (aFuture && bFuture) return ta - tb;
+
+    // wśród przeszłych: najświeższe -> najstarsze (malejąco)
+    return tb - ta;
   });
+};
 
 const normId = (v) => (v == null ? "" : String(v).toLowerCase());
 
@@ -26,8 +41,18 @@ const roleDisplayMap = {
   Volunteer: "Wolontariusz",
 };
 
+// util: zapewnij minimalny czas trwania (np. 1000 ms)
+const withMinDelay = async (promise, ms = 1000) => {
+  const [res] = await Promise.all([
+    promise,
+    new Promise((r) => setTimeout(r, ms)),
+  ]);
+  return res;
+};
+
 export default function ModelDashboard() {
   const { currentUser } = useAuth();
+  const { show } = useToast();
 
   const [castings, setCastings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,6 +68,9 @@ export default function ModelDashboard() {
   );
   const [loadingParticipations, setLoadingParticipations] = useState(false);
 
+  // ID castingu, który właśnie wysyłamy (loading submit)
+  const [applyingId, setApplyingId] = useState(null);
+
   // bannery
   const { banners: castingBanners } = useCastingBanners(castings);
 
@@ -51,7 +79,7 @@ export default function ModelDashboard() {
     const load = async () => {
       try {
         const data = await apiFetch("/casting/casting");
-        setCastings(sortByNewest(Array.isArray(data) ? data : []));
+        setCastings(sortByEventDate(Array.isArray(data) ? data : []));
       } catch (e) {
         console.error(e);
         setError("Błąd pobierania castingów");
@@ -103,22 +131,25 @@ export default function ModelDashboard() {
   const getApplied = (castingId) =>
     participationsByCastingId.get(normId(castingId)) || null;
 
-  // 3) POST – dołącz do castingu
+  // 3) POST – dołącz do castingu (z loadingiem i 1s min delay)
   const handleApply = async (castingId) => {
     if (!currentUser?.id) {
-      alert("Musisz być zalogowany, aby się zgłosić.");
+      show("Musisz być zalogowany, aby się zgłosić.", "error");
       return;
     }
-    if (hasApplied(castingId)) {
+    if (hasApplied(castingId) || applyingId) {
       return;
     }
 
     try {
-      await apiFetch(
-        `/casting/casting/${castingId}/participant/${currentUser.id}`,
-        {
-          method: "POST",
-        }
+      setApplyingId(castingId);
+
+      await withMinDelay(
+        apiFetch(
+          `/casting/casting/${castingId}/participant/${currentUser.id}`,
+          { method: "POST" }
+        ),
+        1000
       );
 
       // optymistycznie pokaż Pending
@@ -137,7 +168,7 @@ export default function ModelDashboard() {
 
       setSelectedCasting(null);
       setApplicationMessage("");
-      alert("Zgłoszenie zostało wysłane!");
+      show("Zgłoszenie zostało wysłane!", "success");
     } catch (err) {
       console.error("Błąd wysyłania zgłoszenia:", err);
 
@@ -153,17 +184,18 @@ export default function ModelDashboard() {
         });
         setSelectedCasting(null);
         setApplicationMessage("");
-        alert("Już jesteś zgłoszony do tego castingu.");
-        return;
+        show("Już jesteś zgłoszony do tego castingu.", "info");
+      } else {
+        const msg =
+          err?.status === 403
+            ? "Nie możesz dołączyć do tego castingu."
+            : err?.status === 404
+            ? "Casting nie istnieje."
+            : "Błąd wysyłania zgłoszenia.";
+        show(msg, "error");
       }
-
-      const msg =
-        err?.status === 403
-          ? "Nie możesz dołączyć do tego castingu."
-          : err?.status === 404
-          ? "Casting nie istnieje."
-          : "Błąd wysyłania zgłoszenia.";
-      alert(msg);
+    } finally {
+      setApplyingId(null);
     }
   };
 
@@ -262,7 +294,8 @@ export default function ModelDashboard() {
                       isClosed ||
                       afterDeadline ||
                       userHasApplied ||
-                      loadingParticipations;
+                      loadingParticipations ||
+                      applyingId === casting.id;
 
                     return (
                       <CastingCard
@@ -273,7 +306,7 @@ export default function ModelDashboard() {
                         appliedStatus={appliedStatus}
                         appliedRole={appliedRole}
                         disabled={disabledComputed}
-                        blockedReason={blockedReason} // ⬅ komunikat PL
+                        blockedReason={blockedReason}
                         onApply={() => {
                           if (disabledComputed || blockedReason) return;
                           setSelectedCasting(casting);
@@ -295,12 +328,30 @@ export default function ModelDashboard() {
           selectedCasting ? castingBanners[selectedCasting.id] : ""
         }
         onClose={() => {
+          if (applyingId) return; // w trakcie wysyłki nie zamykamy
           setSelectedCasting(null);
           setApplicationMessage("");
         }}
       >
         {selectedCasting && (
-          <>
+          <div className="relative">
+            {" "}
+            {/* <-- kontener do overlay */}
+            {/* OVERLAY LOADING podczas wysyłki */}
+            {applyingId && (
+              <div
+                className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-20"
+                aria-busy="true"
+                aria-live="polite"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="inline-block h-8 w-8 rounded-full border-4 border-[#EA1A62] border-t-transparent animate-spin" />
+                  <span className="text-[#2B2628] font-medium">
+                    Wysyłanie zgłoszenia…
+                  </span>
+                </div>
+              </div>
+            )}
             <h3
               id="apply-modal-title"
               className="text-lg font-semibold text-[#2B2628] mb-4 px-6 pt-6"
@@ -317,12 +368,15 @@ export default function ModelDashboard() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EA1A62] focus:border-[#EA1A62]"
                 rows="4"
                 placeholder="Opisz dlaczego jesteś idealną osobą do tego castingu..."
+                disabled={!!applyingId}
               />
             </div>
             <div className="flex space-x-3 px-6 pb-6 pt-4">
               <Button
                 variant="outline"
                 className="flex-1"
+                type="button"
+                disabled={!!applyingId}
                 onClick={() => {
                   setSelectedCasting(null);
                   setApplicationMessage("");
@@ -331,13 +385,22 @@ export default function ModelDashboard() {
                 Anuluj
               </Button>
               <Button
-                className="flex-1"
+                className="flex-1 inline-flex items-center justify-center gap-2"
+                type="button"
+                disabled={!!applyingId}
                 onClick={() => handleApply(selectedCasting.id)}
               >
-                Wyślij zgłoszenie
+                {applyingId ? (
+                  <>
+                    <span className="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    Wysyłanie…
+                  </>
+                ) : (
+                  "Wyślij zgłoszenie"
+                )}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </Modal>
     </div>

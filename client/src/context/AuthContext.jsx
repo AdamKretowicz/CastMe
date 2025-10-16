@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }) => {
       timeoutId = setTimeout(() => {
         logout();
         alert("Zostałeś automatycznie wylogowany po 15 minutach bezczynności.");
+        window.location.assign("/");
       }, SESSION_TIMEOUT);
     };
 
