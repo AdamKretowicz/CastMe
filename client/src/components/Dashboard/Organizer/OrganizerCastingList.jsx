@@ -12,6 +12,32 @@ const roleDisplayMap = {
   Volunteer: "Wolontariusz",
 };
 
+// parser: jeśli backend zwróci ISO bez strefy (YYYY-MM-DDTHH:mm:ss), potraktuj jako UTC
+const parseApiDate = (val) => {
+  if (!val) return null;
+  if (
+    typeof val === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(val)
+  ) {
+    return new Date(val + "Z");
+  }
+  return new Date(val);
+};
+
+// format daty+godziny w PL (Warszawa)
+const formatDateTime = (iso) => {
+  if (!iso) return "—";
+  const d = parseApiDate(iso);
+  return d.toLocaleString("pl-PL", {
+    timeZone: "Europe/Warsaw",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 // pomocniczo: bezpieczne pobranie totalApplicants nawet jeśli backend nie podał wprost
 function getTotalFromStats(stats) {
   if (!stats) return null;
@@ -89,7 +115,7 @@ function OrganizerCastingCard({
         </div>
         <div className="flex items-center">
           <Calendar className="w-4 h-4 mr-1" />
-          {new Date(casting.eventDate).toLocaleDateString("pl-PL")}
+          {formatDateTime(casting.eventDate)}
         </div>
       </div>
 

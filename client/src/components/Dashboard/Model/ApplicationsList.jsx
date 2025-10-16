@@ -88,18 +88,12 @@ export default function ApplicationsList({ applications, castings }) {
         ) : (
           <div className="space-y-3">
             {rows.map((row) => {
-              const title =
-                row.title ||
-                castings?.find((c) => c.id === row.castingId)?.title ||
-                "—";
-              const location =
-                row.location ||
-                castings?.find((c) => c.id === row.castingId)?.location ||
-                "—";
-              const eventDate =
-                row.eventDate ||
-                castings?.find((c) => c.id === row.castingId)?.eventDate ||
-                null;
+              // ✅ jedno wyszukanie castingu
+              const casting = castings?.find((c) => c.id === row.castingId);
+
+              const title = row.title || casting?.title || "—";
+              const location = row.location || casting?.location || "—";
+              const eventDate = row.eventDate || casting?.eventDate || null;
 
               return (
                 <div
