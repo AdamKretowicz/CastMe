@@ -263,9 +263,9 @@ export default function OrganizerDashboard() {
               selectedCastingId={selectedCasting?.id}
               onSelectCasting={(c) => {
                 setSelectedCasting(c);
-                // Prawy panel nie pokazuje już zgłoszeń — otwieramy tylko modal uczestników:
                 openParticipantsModal(c);
               }}
+              onAfterDelete={() => refetchCastings?.()}
             />
           </div>
 
