@@ -79,7 +79,7 @@ namespace Application.Mapper
             casting.Compensation = dto.Compensation;
             casting.Status = dto.Status;
             casting.UpdatedAt = DateTime.UtcNow.Date;
-            // Aktualizacja ról
+            // Rolse
             casting.Roles.Clear();
             foreach (var roleDto in dto.Roles)
             {
@@ -89,7 +89,7 @@ namespace Application.Mapper
                     Capacity = roleDto.Capacity
                 });
             }
-            // Aktualizacja tagów
+            // Tags
             casting.Tags.Clear();
             foreach (var tag in dto.Tags)
             {

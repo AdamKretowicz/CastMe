@@ -104,9 +104,8 @@ namespace WebApi.Controllers
             var existingCasting = await _castingService.GetById(id);
             if (existingCasting is null) return NotFound();
 
-            existingCasting.UpdateEntity(dto);
-            await _castingService.Update(dto, id);
-            return Ok(existingCasting.ToReadDto());
+            var updatedCasting = await _castingService.Update(dto, id);
+            return Ok(updatedCasting);
         }
 
         ///<summary>Delete casting by Id.</summary>

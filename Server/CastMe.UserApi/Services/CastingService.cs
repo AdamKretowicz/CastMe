@@ -35,19 +35,21 @@ namespace WebApi.Services
             await _context.SaveChangesAsync();
         }
 
-        public async Task Update(CastingDto.Update dto, Guid castingId)
+        public async Task<CastingDto.Read> Update(CastingDto.Update dto, Guid castingId)
         {
             var casting = await _context.Castings
+                .Include(c => c.Roles)
+                .Include(c => c.Tags)
                 .FirstOrDefaultAsync(c => c.Id == castingId);
 
             if (casting == null)
                 throw new Exception("Casting not found");
-
+            
             casting.UpdateEntity(dto);
 
 
-            //_context.Castings.Update(entity);
             await _context.SaveChangesAsync();
+            return casting.ToReadDto();
         }
 
         public async Task Delete(Guid id)
